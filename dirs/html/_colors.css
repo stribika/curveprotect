@@ -1,0 +1,11 @@
+.warn {
+  background-color:#ECD672 !important;
+}
+
+.fatal {
+  background-color:#FF856B !important;
+}
+
+.bold {
+  font-weight: bold;
+}

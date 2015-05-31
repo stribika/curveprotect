@@ -1,0 +1,36 @@
+diff -Nur nacl-20110221/curvecp/socket_bind.c nacl-20110221.new/curvecp/socket_bind.c
+--- nacl-20110221/curvecp/socket_bind.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221.new/curvecp/socket_bind.c	2012-05-26 20:38:03.901914978 +0200
+@@ -1,7 +1,7 @@
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+-#include <errno.h>
++#include "e.h"
+ #include "socket.h"
+ #include "byte.h"
+ 
+diff -Nur nacl-20110221/curvecp/socket_recv.c nacl-20110221.new/curvecp/socket_recv.c
+--- nacl-20110221/curvecp/socket_recv.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221.new/curvecp/socket_recv.c	2012-05-26 20:38:13.021912479 +0200
+@@ -1,7 +1,7 @@
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+-#include <errno.h>
++#include "e.h"
+ #include "socket.h"
+ #include "byte.h"
+ 
+diff -Nur nacl-20110221/curvecp/socket_send.c nacl-20110221.new/curvecp/socket_send.c
+--- nacl-20110221/curvecp/socket_send.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221.new/curvecp/socket_send.c	2012-05-26 20:38:28.953911976 +0200
+@@ -1,7 +1,7 @@
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+-#include <errno.h>
++#include "e.h"
+ #include "socket.h"
+ #include "byte.h"
+ 

@@ -1,0 +1,5 @@
+ed25519makekey
+ed25519printkey
+ed25519sign
+ed25519signopen
+dummy

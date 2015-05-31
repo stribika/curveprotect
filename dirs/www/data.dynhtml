@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+# 20110927
+# Jan Mojzis
+# Public domain.
+
+import header, cgi, lib, check, sys, htmltemplate, header
+
+
+try:
+        lib.limit_resources()
+        q = cgi.parse()
+
+        name = q['name'][0]
+        check.zone(name)
+        if name == ".":
+                name = "@"
+
+        xtype = q['type'][0]
+        if xtype not in ["dnslocal", "dnsroot"]:
+                raise ValueError("Only dnslocal and dnsroot type allowed")
+
+        t = htmltemplate.Template("html/data.html")
+        d = header.header("data")
+        d["line"] = []
+        d["name"] = name
+
+
+        f = open("var/dnslocal/zones/%s" % (name))
+        while True:
+                line = f.readline()
+                if not line:
+                        break
+                if line[-1] == "\n":
+                        line = line[0:-1]
+
+                tmp = {}
+                tmp["row"] = lib.escape(line)
+                d["line"].append(tmp)
+        f.close()
+        t.write(d)
+
+except:
+        raise
+

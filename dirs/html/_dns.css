@@ -1,0 +1,107 @@
+div.dns-zone {
+  float: left;
+  width: 130px;
+  margin: 4px 4px 4px 4px;
+}
+div.dns-bold {
+  font-weight: bold;
+}
+input.dns-zone {
+  font-weight: bold;
+}
+
+div.dns-interval {
+  float: left;
+  width: 40px;
+  margin: 4px 4px 4px 4px;
+}
+
+
+div.dns-type {
+  float: left;
+  width: 120px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.dns-submit {
+  float: left;
+  width: 90px;
+  margin: 4px 4px 4px 4px;
+  text-align: center;
+}
+
+div.dns-submit2 {
+  float: left;
+  width: 70px;
+  margin: 4px 4px 4px 4px;
+  text-align: center;
+}
+
+div.dns-last {
+  float: left;
+  width: 100px;
+  margin: 4px 4px 4px 20px;
+}
+input.dns-last {
+  font-family: monospace;
+  font-size: 80%;
+}
+
+div.dns-down {
+  float: left;
+  width: 110px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.dns-down2 {
+  float: left;
+  width: 90px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.dns-value {
+  float: left;
+  width: 274px;
+  margin: 4px 4px 4px 4px;
+}
+
+
+div.dns-conf {
+  float: left;
+  width: 200px;
+  margin: 4px 4px 4px 4px;
+}
+
+input.dns-keydir {
+  width: 100%;
+}
+div.dns-keydir {
+  float: left;
+  width: 120px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.dns-keydirx {
+  float: left;
+  width: 0px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.dns-confx {
+  float: left;
+  width: 320px;
+  margin: 4px 4px 4px 4px;
+}
+
+
+div.dns-separator {
+  float: left;
+  height: 10px;
+  width: 100%;
+}
+
+div.dns-name {
+  float: left;
+  width: 260px;
+  margin: 4px 4px 4px 4px;
+}

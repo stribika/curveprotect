@@ -1,0 +1,73 @@
+div.vpn-pre {
+  float: left;
+  width: 4px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.vpn-port {
+  float: left;
+  width: 50px;
+  margin: 4px 4px 4px 4px;
+}
+div.vpn-host {
+  float: left;
+  font-weight: bold;
+  width: 120px;
+  margin: 4px 4px 4px 4px;
+}
+input.vpn-keydir {
+  width: 100%;
+}
+div.vpn-keydir {
+  float: left;
+  width: 130px;
+  margin: 4px 4px 4px 4px;
+}
+div.vpn-submit {
+  float: left;
+  width: 80px;
+  margin: 4px 14px 4px 4px;
+}
+div.vpn-submit2 {
+  float: left;
+  width: 60px;
+  margin: 4px 4px 4px 4px;
+}
+div.vpn-status {
+  float: left;
+  width: 180px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.vpn-separator {
+  float: left;
+  height: 10px;
+  width: 100%;
+}
+
+
+/* ACL */
+div.vpn-type {
+  float: left;
+  width: 110px;
+  margin: 4px 4px 4px 4px;
+}
+input.vpn-type {
+  width: 100%;
+}
+div.vpn-dummy {
+  float: left;
+}
+
+div.vpn-net {
+  float: left;
+  width: 100px;
+  margin: 4px 4px 4px 4px;
+}
+input.vpn-net {
+  width: 100%;
+}
+
+
+
+

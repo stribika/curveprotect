@@ -1,0 +1,5 @@
+$ORIGIN .
+$TTL	1
+
+; KO
+$INCLUDE /home/ondrej/Projects/knot/src/zscanner/test/cases/		; Given file is a directory

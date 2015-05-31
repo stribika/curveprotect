@@ -1,0 +1,14 @@
+#!/bin/sh
+
+#sets CURVEPROTECTHOME using debhelper
+#DEBHELPER#
+
+
+if [ x"$1" != xremove ]; then
+  if [ x"$1" != xpurge ]; then
+    exit 0
+  fi
+fi
+
+"${CURVEPROTECTHOME}/sbin/_prerm"
+exit 0

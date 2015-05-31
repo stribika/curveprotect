@@ -1,0 +1,58 @@
+diff -Nur admin.orig/daemontools-0.76/src/supervise.c admin/daemontools-0.76/src/supervise.c
+--- admin.orig/daemontools-0.76/src/supervise.c	2001-07-12 18:49:49.000000000 +0200
++++ admin/daemontools-0.76/src/supervise.c	2012-12-23 21:54:20.437771704 +0100
+@@ -97,6 +97,8 @@
+       trigger();
+       return;
+     case 0:
++      setsid();
++      setpgid(0,0);
+       sig_uncatch(sig_child);
+       sig_unblock(sig_child);
+       execve(*run,run,environ);
+@@ -158,7 +160,7 @@
+ 	case 'd':
+ 	  flagwant = 1;
+ 	  flagwantup = 0;
+-	  if (pid) { kill(pid,SIGTERM); kill(pid,SIGCONT); flagpaused = 0; }
++	  if (pid) { killpg(pid,SIGTERM); killpg(pid,SIGCONT); flagpaused = 0; }
+ 	  announce();
+ 	  break;
+ 	case 'u':
+@@ -173,29 +175,29 @@
+ 	  if (!pid) trystart();
+ 	  break;
+ 	case 'a':
+-	  if (pid) kill(pid,SIGALRM);
++	  if (pid) killpg(pid,SIGALRM);
+ 	  break;
+ 	case 'h':
+-	  if (pid) kill(pid,SIGHUP);
++	  if (pid) killpg(pid,SIGHUP);
+ 	  break;
+ 	case 'k':
+-	  if (pid) kill(pid,SIGKILL);
++	  if (pid) killpg(pid,SIGKILL);
+ 	  break;
+ 	case 't':
+-	  if (pid) kill(pid,SIGTERM);
++	  if (pid) killpg(pid,SIGTERM);
+ 	  break;
+ 	case 'i':
+-	  if (pid) kill(pid,SIGINT);
++	  if (pid) killpg(pid,SIGINT);
+ 	  break;
+ 	case 'p':
+ 	  flagpaused = 1;
+ 	  announce();
+-	  if (pid) kill(pid,SIGSTOP);
++	  if (pid) killpg(pid,SIGSTOP);
+ 	  break;
+ 	case 'c':
+ 	  flagpaused = 0;
+ 	  announce();
+-	  if (pid) kill(pid,SIGCONT);
++	  if (pid) killpg(pid,SIGCONT);
+ 	  break;
+ 	case 'x':
+ 	  flagexit = 1;

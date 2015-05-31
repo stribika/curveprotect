@@ -1,0 +1,191 @@
+#!/usr/bin/env python
+# 20110927
+# Jan Mojzis
+# Public domain.
+
+import os, lib, header, footer, resource, htmltemplate, config
+
+
+try:
+        lib.limit_resources()
+
+
+        t = htmltemplate.Template("html/forwarder.html")
+        d=header.header("forwarder");
+        d["protocols"] = []
+        d["forwarder"] = []
+
+        for protocol in lib.protocols:
+                tmp = {}
+                tmp["protocol"] = protocol
+                tmp["selector"] = lib.protocols[protocol]["selector"]
+                tmp["start"] = lib.protocols[protocol]["start"]
+                tmp["port"] = lib.protocols[protocol]["port"]
+                d["protocols"].append(tmp)
+
+
+        keys = lib.curvecp_keys()
+        firstunconfigured = -1
+
+        for i in range(0,99):
+                name = "forwarder%02d" % (i)
+
+                if not os.path.exists("etc/%s" % (name)):
+                        continue
+
+                try:
+                        ip = lib.openreadcloseescape("etc/%s/env/IP" % (name))
+                except:
+                        ip = ""
+                        morefwds = False
+                try:
+                        port = lib.openreadcloseescape("etc/%s/env/PORT" % (name))
+                except:
+                        port = ""
+                        morefwds = False
+                try:
+                        server = lib.openreadcloseescape("etc/%s/env/SERVER" % (name))
+                except:
+                        server = ""
+                        morefwds = False
+                try:
+                        keydir = lib.openreadcloseescape("etc/%s/env/KEYDIR" % (name))
+                except:
+                        keydir = ""
+
+
+                if os.path.exists("etc/%s/env/CLIENTFIRST" % (name)):
+                        sf=""
+                        cf='selected="selected"'
+                        wf=""
+                else:
+                        sf='selected="selected"'
+                        cf=""
+                        wf=""
+
+                try:
+                        selector = lib.openreadcloseescape("etc/%s/env/SELECTOR" % (name))
+                        selector = selector[0].lower()
+                except:
+                        selector = " "
+
+                try:
+                        proto = lib.openreadcloseescape("etc/%s/env/PROTOCOL" % (name))
+                        wf='disabled="disabled"'
+                except:
+                        proto = ""
+
+                if (port == "" or ip == ""):
+                        if firstunconfigured == -1:
+                                firstunconfigured = i
+                        continue
+
+                tmp = {}
+                tmp["name"] = name
+                tmp["wf"] = wf
+                tmp["cf"] = cf
+                tmp["sf"] = sf
+                tmp["proto"] = []
+                tmp["selector"] = []
+                tmp["keys"] = []
+                tmp["ip"] = []
+                tmp["port"] = port
+                tmp["server"] = server
+                tmp["status"] = lib.svc("%s/%s" % (config.servicedir, name))
+
+
+                for protocol in lib.protocols:
+                        tmp1 = {}
+                        if protocol == proto:
+                                tmp1["sl"] = 'selected="selected"'
+                        else:
+                                tmp1["sl"] = ''
+                        tmp1["proto"] = protocol
+                        tmp1["protoup"] = protocol.upper()
+                        tmp["proto"].append(tmp1)
+
+                if selector == " ":
+                        tmp["xflg"] = 'selected="selected"'
+                else:
+                        tmp["xflg"] = ''
+
+                for ch in "abcdefghijklmnopqrstuvwxyz":
+                        tmp1 = {}
+                        tmp1["ch"] = ch
+                        if selector == ch:
+                                tmp1["flg"] = 'selected="selected"'
+                        else:
+                                tmp1["flg"] = ''
+                        tmp["selector"].append(tmp1)
+
+                mykey = os.path.basename(keydir)
+                for key in keys:
+                        if mykey == key:
+                                sl='selected="selected"'
+                        else:
+                                sl = ''
+                        tmp1 = {}
+                        tmp1["sl"] = sl
+                        tmp1["key"] = key
+                        tmp["keys"].append(tmp1)
+
+                for xip in lib.forwarder_ips:
+                        tmp1 = {}
+                        if ip == xip:
+                                tmp1["sl"] = 'selected="selected"'
+                        else:
+                                tmp1["sl"] = ""
+                        tmp1["ip"] = xip
+                        tmp["ip"].append(tmp1)
+
+                d["forwarder"].append(tmp)
+
+        if firstunconfigured == -1:
+                d["more"] = [{}]
+        else:
+                d["more"] = []
+                tmp = {}
+
+                tmp["name"] = "forwarder%02d" % (firstunconfigured)
+                tmp["wf"] = ""
+                tmp["cf"] = ""
+                tmp["sf"] = 'selected="selected"'
+                tmp["proto"] = []
+                tmp["selector"] = []
+                tmp["keys"] = []
+                tmp["ip"] = []
+                tmp["port"] = ""
+                tmp["server"] = ""
+                tmp["status"] = ""
+
+                for key in keys:
+                        tmp1 = {}
+                        tmp1["sl"] = ""
+                        tmp1["key"] = key
+                        tmp["keys"].append(tmp1)
+
+                for xip in lib.forwarder_ips:
+                        tmp1 = {}
+                        tmp1["sl"] = ""
+                        tmp1["ip"] = xip
+                        tmp["ip"].append(tmp1)
+
+                for protocol in lib.protocols:
+                        tmp1 = {}
+                        tmp1["sl"] = ''
+                        tmp1["proto"] = protocol
+                        tmp1["protoup"] = protocol.upper()
+                        tmp["proto"].append(tmp1)
+
+                for ch in "abcdefghijklmnopqrstuvwxyz":
+                        tmp1 = {}
+                        tmp1["ch"] = ch
+                        tmp1["flg"] = ''
+                        tmp["selector"].append(tmp1)
+
+                d["new"]=[tmp]
+
+        t.write(d)
+
+except:
+        raise

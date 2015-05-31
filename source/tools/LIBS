@@ -1,0 +1,9 @@
+savesync.o
+extremesandbox.o
+readblock.o
+crypto_block_aes256vulnerable.o
+crypto_block_salsa20.o
+rijndael.o
+crypto.o
+sha256.o
+sha512.o

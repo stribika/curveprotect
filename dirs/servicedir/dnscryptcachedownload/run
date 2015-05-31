@@ -1,0 +1,152 @@
+#!/bin/sh
+exec 2>&1
+PATH="_CURVEPROTECT_/bin:${PATH}"
+export PATH
+
+#XXX TODO - drop root
+
+DNSCRYPTCACHE="_CURVEPROTECT_/var/dnscryptcache"
+export DNSCRYPTCACHE
+files="${DNSCRYPTCACHE}/root/servers/* ${DNSCRYPTCACHE}/root/dump/* ${DNSCRYPTCACHE}/env/* ${DNSCRYPTCACHE}/tmp/*"
+export files
+servicedir="_CURVEPROTECT_/service/dnscryptcache"
+export servicedir
+
+exec \
+setlock _CURVEPROTECT_/var/lock/dnscryptcachedownload.lock \
+envdir _CURVEPROTECT_/etc/dnscryptcache/env \
+envdir _CURVEPROTECT_/var/dnscryptcache/env \
+sh -c '
+
+  if [ x"${DNSCRYPTZONE}" = x ]; then
+    echo "\$DNSCRYPTZONE not set"
+    rm -f ${files}; svc -t "${servicedir}"; exec randomsleep 86400
+  fi
+  if [ x"${ED25519KEYDIR}" = x ]; then
+    echo "\$ED25519KEYDIR not set"
+    rm -f ${files}; svc -t "${servicedir}"; exec randomsleep 86400
+  fi
+  ED25519PK=`ed25519printkey "${ED25519KEYDIR}"`; export ED25519PK
+  if [ x"${ED25519PK}" = x ]; then
+    echo "\$ED25519PK not set"
+    rm -f ${files}; svc -t "${servicedir}"; exec randomsleep 86400
+  fi
+  if [ x"${DNSCRYPTIP}" = x ]; then
+    echo "\$DNSCRYPTIP not set"
+    rm -f ${files}; svc -t "${servicedir}"; exec randomsleep 86400
+  fi
+  if [ x"${RESPONSEMAGIC}" = x ]; then
+    echo "\$RESPONSEMAGIC not set"
+    rm -f ${files}; svc -t "${servicedir}"; exec randomsleep 86400
+  fi
+
+  #echo "${DNSCRYPTZONE}: starting" >&2
+
+  if [ -f "${DNSCRYPTCACHE}/root/servers/@" ]; then
+    confpk=`awk '"'"'BEGIN{FS="|"}{print $2}'"'"' < "${DNSCRYPTCACHE}/root/servers/@" | sort -u | head -1 || :`
+    confip=`awk '"'"'BEGIN{FS="|"}{print $1}'"'"' < "${DNSCRYPTCACHE}/root/servers/@" | tr -s "\n" "," | sed "s/,$//" || :`
+  fi
+  confmagicr="${RESPONSEMAGIC}"
+  confmagicq="${QUERYMAGIC}"
+  confperiodto="${PERIODTO}"
+  confserial="${SERIAL}"
+
+  now=`sinceepoch`
+  export now
+  data="`extremesetuidgid dnscryptgetcert "${DNSCRYPTZONE}" \"${ED25519PK}\" \"${DNSCRYPTIP}\"`"
+  if [ $? -ne 0 ]; then
+    if [ 0"${confperiodto}" -le 0"${now}" ]; then
+      rm -f ${files}; svc -t "${servicedir}"
+      sleepmin=360
+      sleepmax=420
+    else
+      sleepmax=`expr "${confperiodto}" - "${now}"`
+      sleepmin="${sleepmax}"
+      if [ 0"${sleepmax}" -gt 7200 ]; then
+        sleepmin=3600
+        sleepmax=7200
+      fi
+      if [ 0"${sleepmin}" -lt 360 ]; then
+        sleepmin=360
+        sleepmax=360
+      fi
+    fi
+    echo "${DNSCRYPTZONE}: fatal: sleeping for ${sleepmin}-${sleepmax} seconds" >&2
+    exec randomsleep "${sleepmin}" "${sleepmax}"
+  fi
+
+  echo "${data}" \
+  | sort -r \
+  | while read serial pk magicq periodsince periodto
+  do
+    if [ 0"${now}" -le 0"${periodsince}" ]; then
+      echo "${DNSCRYPTZONE}: warning: certificate in the future: ${serial} ${pk} ${magicq} ${periodsince} ${periodto}" >&2
+      continue;
+    fi
+    if [ 0"${periodto}" -le 0"${now}" ]; then
+      echo "${DNSCRYPTZONE}: warning: certificate to old: ${serial} ${pk} ${magicq} ${periodsince} ${periodto}" >&2
+      continue;
+    fi
+
+    echo "${now}" > "${DNSCRYPTCACHE}/tmp/LASTDOWNLOAD"
+    fsyncfile "${DNSCRYPTCACHE}/tmp/LASTDOWNLOAD"
+    mv -f "${DNSCRYPTCACHE}/tmp/LASTDOWNLOAD" "${DNSCRYPTCACHE}/env/LASTDOWNLOAD"
+
+    if [ x"${serial}" = x"${confserial}" ]; then
+      if [ x"${pk}" = x"${confpk}" ]; then
+        if [ x"${DNSCRYPTIP}" = x"${confip}" ]; then
+          #nothing changed
+          exit 123
+        fi
+      fi
+    fi
+
+    (
+      echo "${periodto}" PERIODTO
+      echo "${periodsince}" PERIODSINCE
+      echo "${magicq}" QUERYMAGIC
+      echo "${serial}" SERIAL
+    ) | (
+      while read x y
+      do
+        echo "${x}" > "${DNSCRYPTCACHE}/tmp/${y}"
+        fsyncfile "${DNSCRYPTCACHE}/tmp/${y}" || exit 111
+        mv -f "${DNSCRYPTCACHE}/tmp/${y}" "${DNSCRYPTCACHE}/env/${y}" || exit 111
+      done
+    ) || exit $?
+
+    echo "${DNSCRYPTIP}" | tr -s "," "\n" | sed "s/$/|${pk}/" > "${DNSCRYPTCACHE}/tmp/@"
+    fsyncfile "${DNSCRYPTCACHE}/tmp/@"
+    mv -f "${DNSCRYPTCACHE}/tmp/@" "${DNSCRYPTCACHE}/root/servers/@"
+
+  done
+  ex=$?
+
+  if [ x"`head -1 \"${DNSCRYPTCACHE}/env/LASTDOWNLOAD\" 2>/dev/null`" != x"${now}" ]; then
+    echo "${DNSCRYPTZONE}: fatal: no valid certificate found: sleeping for 360-420 seconds" >&2
+    rm -f ${files}; svc -t "${servicedir}"; exec randomsleep 360 420
+  fi
+
+  periodto=`head -1 "${DNSCRYPTCACHE}/env/PERIODTO"`
+  export periodto; export now
+  sleepmax=`expr "${periodto}" - "${now}"`
+  sleepmin="${sleepmax}"
+  if [ "${sleepmax}" -gt 7200 ]; then
+    sleepmin=3600
+    sleepmax=7200
+  fi
+
+  if [ 0"${periodto}" -le 0"${now}" ]; then
+    echo "${DNSCRYPTZONE}: fatal: certificate to old: sleeping for 360-420 seconds" >&2
+    rm -f ${files}; svc -t "${servicedir}"; exec randomsleep 360 420
+  fi
+
+  if [ "${ex}" -eq 123 ]; then
+    echo "${DNSCRYPTZONE}: nothing changed: sleeping for ${sleepmin}-${sleepmax} seconds" >&2
+    exec randomsleep "${sleepmin}" "${sleepmax}"
+  fi
+
+  svc -t _CURVEPROTECT_/service/dnscryptcache
+  echo "${DNSCRYPTZONE}: reconfigured: sleeping for ${sleepmin}-${sleepmax} seconds" >&2
+  exec randomsleep "${sleepmin}" "${sleepmax}"
+'

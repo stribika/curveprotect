@@ -1,0 +1,124 @@
+#!/usr/bin/env python
+# 20110823
+# Jan Mojzis
+# Public domain.
+
+import os, lib, header, footer, resource, htmltemplate, sys, config
+
+def getacl(name = "", x = ""):
+        """
+        """
+
+        ret = []
+
+        d = "etc/%s/root/%s" % (name, x)
+        if not os.path.exists(d):
+                return ret
+
+
+        for dd in os.listdir(d):
+                ddd = dd.split(".")
+                if len(ddd) != 5:
+                        continue
+
+                ret.append({"net":".".join(ddd[0:4]),"mask":ddd[4],"name":name})
+        return ret
+
+try:
+        lib.limit_resources()
+
+        qs = os.getenv("QUERY_STRING")
+
+        t = htmltemplate.Template("html/vpn.html")
+        d = header.header("vpn")
+        d["vpn"] = []
+        d["new"] = []
+
+        keys = lib.curvecp_keys()
+        firstunconfigured = -1
+
+        for i in range(0,99):
+                name = "vpn%02d" % (i)
+
+                if not os.path.exists("etc/%s" % (name)):
+                        continue
+
+                try:
+                        port = lib.openreadcloseescape("etc/%s/env/PORT" % (name))
+                except:
+                        port = ""
+                        morevpn = False
+                try:
+                        server = lib.openreadcloseescape("etc/%s/env/SERVER" % (name))
+                except:
+                        server = ""
+                        morevpn = False
+                try:
+                        keydir = lib.openreadcloseescape("etc/%s/env/KEYDIR" % (name))
+                except:
+                        keydir = ""
+                        morevpn = False
+
+                if (port == "" or server == "" or keydir == ""):
+                        if firstunconfigured == -1:
+                                firstunconfigured = i
+                        continue
+
+                tmp = {}
+                tmp["name"] = name
+                tmp["port"] = port
+                tmp["server"] = server
+                tmp["status"] = lib.svc("%s/%s" % (config.servicedir, name))
+                tmp["keys"] = []
+
+                tmp["display"] = "none"
+                if name == qs:
+                        tmp["display"] = "block"
+
+                #keys
+                mykey = os.path.basename(keydir)
+                for key in keys:
+                        if mykey == key:
+                                sl='selected="selected"'
+                        else:
+                                sl = ''
+                        tmp1 = {}
+                        tmp1["sl"] = sl
+                        tmp1["key"] = key
+                        tmp["keys"].append(tmp1)
+                #access
+                tmp["ip"] = getacl(name,"ip")
+                tmp["route"] = getacl(name,"route")
+
+                xtypes = []
+                for xtype in ["ROUTE","IP"]:
+                        tmp1 = {}
+                        tmp1["type"] = xtype
+                        xtypes.append(tmp1)
+                tmp["newacl"] = [{"name":name,"types":xtypes}]
+
+                        
+                d["vpn"].append(tmp)
+
+        if firstunconfigured == -1:
+                d["more"] = [{}]
+        else:
+                d["more"] = []
+                tmp = {}
+                tmp["name"] = "vpn%02d" % (firstunconfigured)
+                tmp["port"] = ""
+                tmp["server"] = ""
+                tmp["keys"] = []
+
+                for key in keys:
+                        tmp1 = {}
+                        tmp1["sl"] = ''
+                        tmp1["key"] = key
+                        tmp["keys"].append(tmp1)
+
+                d["new"].append(tmp)
+
+        t.write(d)
+
+except:
+        raise

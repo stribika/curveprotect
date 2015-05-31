@@ -1,0 +1,16 @@
+zscanner/file_loader.c
+zscanner/scanner.c
+zscanner/scanner_functions.c
+common/errors.c
+common/errcode.c
+common/descriptor.c
+libknot/util/utils.c
+common/errcode.h
+zscanner/file_loader.h
+zscanner/scanner.h
+zscanner/scanner_functions.h
+common/errors.h
+common/descriptor.h
+libknot/common.h
+common/mempattern.h
+libknot/util/utils.h

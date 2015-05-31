@@ -1,0 +1,8 @@
+#!/bin/sh
+exec 2>&1
+PATH="_CURVEPROTECT_/bin:${PATH}"
+export PATH
+
+exec envdir _CURVEPROTECT_/etc/dnslocal/env sh -c '
+  exec softlimit -d10000000 nettcpserver -v -- "$IP" 53 extremeenvuidgid axfrdns
+'

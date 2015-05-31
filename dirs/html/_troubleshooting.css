@@ -1,0 +1,26 @@
+
+div.troubleshooting-value {
+  float: left;
+  /* font-weight: bold; */
+  width: 1000px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.troubleshooting-zone {
+  float: left;
+  width: 200px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.troubleshooting-status {
+  float: left;
+  width: 300px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.troubleshooting-separator {
+  float: left;
+  height: 10px;
+  width: 100%;
+}
+

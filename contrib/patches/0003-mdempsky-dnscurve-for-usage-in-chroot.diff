@@ -1,0 +1,53 @@
+diff -Nur mdempsky-dnscurve2/slownacl/verify.py mdempsky-dnscurve3/slownacl/verify.py
+--- mdempsky-dnscurve2/slownacl/verify.py	2011-10-19 09:39:09.551373797 +0200
++++ mdempsky-dnscurve3/slownacl/verify.py	2011-10-19 14:38:44.682890446 +0200
+@@ -1,5 +1,7 @@
+ __all__ = ['crypto_verify16', 'crypto_verify32']
+ 
++import functools
++
+ def crypto_verify16(a, b):
+   if len(a) != 16 or len(b) != 16:
+     raise ValueError('Not 16 bytes')
+diff -Nur mdempsky-dnscurve2/tools/dnscurve.py mdempsky-dnscurve3/tools/dnscurve.py
+--- mdempsky-dnscurve2/tools/dnscurve.py	2011-10-19 09:21:11.174899291 +0200
++++ mdempsky-dnscurve3/tools/dnscurve.py	2011-10-19 12:57:47.734872425 +0200
+@@ -1,6 +1,8 @@
+ import base32
+ import dns
+ 
++devurandom=open('/dev/urandom')
++
+ def dnscurve_getpubkey(name):
+   for s in name:
+     if len(s) == 54 and s[:3].lower() == 'uz5':
+@@ -36,7 +38,7 @@
+ 
+ def dnscurve_encode_txt_query(nonce, box, pubkey, zone):
+   output = []
+-  output.append(open('/dev/urandom').read(2))
++  output.append(devurandom.read(2))
+   output.append('\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00')
+ 
+   for label in dnscurve_encode_queryname(nonce, box, pubkey, zone):
+diff -Nur mdempsky-dnscurve2/tools/dns.py mdempsky-dnscurve3/tools/dns.py
+--- mdempsky-dnscurve2/tools/dns.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve3/tools/dns.py	2011-10-19 12:59:17.102622243 +0200
+@@ -2,6 +2,8 @@
+ import binascii
+ import re
+ 
++devurandom=open('/dev/urandom')
++
+ qtypes = {1: 'A',
+           2: 'NS',
+           5: 'CNAME',
+@@ -152,7 +154,7 @@
+ def dns_build_query(type, host):
+   output = []
+ 
+-  output.append(open('/dev/urandom').read(2))
++  output.append(devurandom.read(2))
+   output.append('\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00')
+ 
+   for label in dns_domain_fromdot(host):

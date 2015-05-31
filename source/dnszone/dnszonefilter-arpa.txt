@@ -1,0 +1,4 @@
+#arpa test
+=a.testzone.test.arpa:1.2.3.4:100
+#bad IP
+#=a.testzone.test.arpa:1.2.3.4.5:100

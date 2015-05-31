@@ -1,0 +1,31 @@
+#!/bin/sh -e
+
+echo "=== `date` === starting tun.c"
+okabi | (
+  while read abi
+  do
+    (
+      echo 'tun.c tun.c-linux'
+      echo 'tun.c tun.c-macosx'
+      echo 'tun.c tun.c-bsd'
+      echo 'tun.c tun.c-disabled'
+    ) | (
+      while read target source
+      do
+        okc-$abi | (
+          while read c
+          do
+            [ -f "tun/$abi/$target" ] && continue
+            echo "=== `date` === $abi trying $source as $target under $c..." >&2
+            rm -f "$source" "$target.tmp" 
+            $c -o "$source" "$source.c" 2>/dev/null || continue
+            ./$source > "$target.tmp" 2>/dev/null || continue
+            echo "=== `date` === $abi using $source as $target" >&2
+            mkdir -p "tun/$abi"
+            cp "$target.tmp" "tun/$abi/$target"
+          done
+        )
+      done
+    )
+  done
+)

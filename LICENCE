@@ -1,0 +1,28 @@
+curveprotect is placed into the public domain
+and is distributed without any warranty
+
+other software used and distributed in curveprotect package (contrib/*):
+
+contrib/djbdns-1.05 (public domain)
+===================================
+see: http://cr.yp.to/distributors.html
+
+contrib/ucspi-tcp-0.88 (public domain)
+======================================
+see: http://cr.yp.to/distributors.html
+
+contrib/daemontools-0.76 (public domain)
+========================================
+see: http://cr.yp.to/distributors.html
+
+contrib/nacl-20110221 (public domain)
+=====================================
+see: http://nacl.cr.yp.to/features.html
+
+contrib/gnupg-1.4.18 (GPL v3)
+=============================
+see: contrib/gnupg-1.4.16/COPYING
+
+contrib/knot-1.3.3 (GPL v3)
+===========================
+see: contrib/knot-1.3.3/COPYING

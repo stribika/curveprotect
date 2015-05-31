@@ -1,0 +1,84 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<script type="text/javascript">
+function confirmSubmit(x) {
+    var usedkeys=%TEMPLATE_VARIABLE_usedkeys%;
+    key = x.form.elements["name"].value;
+
+    for (i = 0; i < usedkeys.length; i++){
+        if (usedkeys[i] == key) {
+            alert ("Unable to remove key, key in use!")
+            return false;
+        }
+    }
+
+    return confirm("Key directory will be permanently removed. Are You sure?");
+}
+</script>
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_keys.css
+</style>
+
+%TEMPLATE_BLOCKBEGIN_dnscurve%
+<div class="header">DNSCurve - client encryption/authorization keys</div>
+<div class="note">
+DNSCurve keys should be used for:
+<li>DNS resolver</li>
+<li>DNSCrypt resolver</li>
+<li>or for both</li>
+</div>
+%TEMPLATE_BLOCKEND_dnscurve%
+
+%TEMPLATE_BLOCKBEGIN_curvecp%
+<div class="header">CurveCP - client authorization keys</div>
+<div class="note">
+CurveCP keys should be used for:
+<li>CurveCP forwarders</li>
+<li>CurveCP proxies</li>
+<li>CurveCP VPN</li>
+</div>
+%TEMPLATE_BLOCKEND_curvecp%
+
+<div class="line label">
+  <div class="keys-name">key-name</div>
+  <div class="keys-pk">public-key</div>
+  <div class="keys-mtime">created</div>
+  <div class="keys-submit"></div>
+  <div class="keys-status"></div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_newkey%
+<div class="line">
+  <form name="input" action="keys_config.dynhtml" method="get">
+    <div class="keys-name"  ><input type="text"   class="keys-name"  name="name"   value="" /></div>
+    <div class="keys-pk"    ><input type="text"   class="keys-pk"    name="pk"     value="" readonly/></div>
+    <div class="keys-mtime" ><input type="text"   class="keys-mtime" name="mtime"  value="" readonly/></div>
+    <input type="hidden" name="keytype" value="%TEMPLATE_VARIABLE_keytype%">
+    <div class="keys-submit"><input type="submit" class="submit"     name="submit" value="create" /></div>
+  </form>
+</div><div class="lineend"></div>
+<div class="keys-separator"></div>
+%TEMPLATE_BLOCKEND_newkey%
+
+<div class="line label">
+  <div class="keys-name"></div>
+  <div class="keys-pk"></div>
+  <div class="keys-mtime"></div>
+  <div class="keys-submit"></div>
+  <div class="keys-status"></div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_keys%
+<div class="line">
+  <form name="input" action="keys_config.dynhtml" method="get">
+    <div class="keys-name"  ><input type="text"   class="keys-name"  name="name"   value="%TEMPLATE_VARIABLE_name%" readonly/></div>
+    <div class="keys-pk"    ><input type="text"   class="keys-pk"    name="pk"     value="%TEMPLATE_VARIABLE_pk%" readonly/></div>
+    <div class="keys-mtime" ><input type="text"   class="keys-mtime" name="mtime"  value="%TEMPLATE_VARIABLE_tm%" readonly/></div>
+    <input type="hidden" name="keytype" value="%TEMPLATE_VARIABLE_keytype%">
+    <div class="keys-submit"><input type="submit" class="submit"     name="submit" value="remove" onClick="return confirmSubmit(this)"/></div>
+  </form>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_keys%
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html

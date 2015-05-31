@@ -1,0 +1,170 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<script type="text/javascript">
+function setSelector(x) {
+  f = x.form;
+  v = x.value;
+  f.elements["selector"].disabled="";
+  f.elements["start"].disabled="";
+%TEMPLATE_BLOCKBEGIN_protocols%
+  if (v == "%TEMPLATE_VARIABLE_protocol%") {
+    f.elements["selector"].disabled="disabled";
+    f.elements["selector"].value="%TEMPLATE_VARIABLE_selector%";
+    f.elements["start"].disabled="disabled";
+    f.elements["start"].value="%TEMPLATE_VARIABLE_start%";
+    f.elements["port"].value="%TEMPLATE_VARIABLE_port%";
+    return;
+  }
+%TEMPLATE_BLOCKEND_protocols%
+}
+</script>
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_forwarder.css
+</style>
+
+<div class="line label">
+  <div class="fproto">protocol</div>
+  <div class="forwarder-start">start</div>
+  <div class="fselector">sel.</div>
+  <div class="fkeydir">authorization key</div>
+  <div class="fip">local ip</div>
+  <div class="fport">port</div>
+  <div class="fhost">remote host</div>
+  <div class="fsubmit"></div>
+  <div class="forwarder-submit2"></div>
+  <div class="forwarder-submit2"></div>
+<div class="fstatus"></div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_new%
+<div class="line">
+  <form name="input" action="/forwarder_config.dynhtml" method="get">
+    <input type="hidden" name="name" value="%TEMPLATE_VARIABLE_name%"/>
+    <div class="fproto">
+      <select class="fproto" name="proto" onChange="setSelector(this)">
+        <option value=""></option>
+%TEMPLATE_BLOCKBEGIN_proto%
+        <option value="%TEMPLATE_VARIABLE_proto%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_protoup%</option>
+%TEMPLATE_BLOCKEND_proto%
+      </select>
+    </div>
+    <div class="forwarder-start">
+      <select class="forwarder-start" name="start" %TEMPLATE_VARIABLE_wf%>
+        <option value="serverfirst" %TEMPLATE_VARIABLE_sf%>server first</option>
+        <option value="clientfirst" %TEMPLATE_VARIABLE_cf%>client first</option>
+      </select>
+    </div>
+    <div class="fselector">
+      <select class="fselector" name="selector" %TEMPLATE_VARIABLE_wf%>
+        <option value=" "> </option>
+%TEMPLATE_BLOCKBEGIN_selector%
+        <option value="%TEMPLATE_VARIABLE_ch%" %TEMPLATE_VARIABLE_flg%>%TEMPLATE_VARIABLE_ch%</option>
+%TEMPLATE_BLOCKEND_selector%
+      </select>
+    </div>
+    <div  class="fkeydir">
+      <select class="fkeydir" name="keydir">
+        <option value="">random generated</option>
+%TEMPLATE_BLOCKBEGIN_keys%
+        <option value="%TEMPLATE_VARIABLE_key%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_key%</option>
+%TEMPLATE_BLOCKEND_keys%
+      </select>
+    </div>
+
+    <div class="fip">
+      <select name="ip">
+%TEMPLATE_BLOCKBEGIN_ip%
+        <option value="%TEMPLATE_VARIABLE_ip%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_ip%</option>
+%TEMPLATE_BLOCKEND_ip%
+      </select>
+    </div>
+    <div class="fport"><input type="text" class="fport" name="port" value="%TEMPLATE_VARIABLE_port%" /></div>
+    <div class="fhost"><input type="text" class="fhost" name="host" value="%TEMPLATE_VARIABLE_server%" /></div>
+    <div class="fsubmit"><input class="submit" type="submit" name="submit" value="add" /></div>
+    <div class="forwarder-submit2"></div>
+    <div class="forwarder-submit2"></div>
+    <div class="fstatus"></div>
+  </form>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_new%
+
+<div class="forwarder-separator"></div>
+
+<div class="line label">
+  <div class="fproto"></div>
+  <div class="forwarder-start"></div>
+  <div class="fselector"></div>
+  <div class="fkeydir"></div>
+  <div class="fip"></div>
+  <div class="fport"></div>
+  <div class="fhost"></div>
+  <div class="fsubmit"></div>
+  <div class="forwarder-submit2"></div>
+  <div class="forwarder-submit2"></div>
+<div class="fstatus"></div>
+</div><div class="lineend"></div>
+
+
+%TEMPLATE_BLOCKBEGIN_forwarder%
+<form name="input" action="/forwarder_config.dynhtml" method="get">
+  <div class="line">
+    <input type="hidden" name="name" value="%TEMPLATE_VARIABLE_name%"/>
+    <div class="fproto">
+      <select class="fproto" name="proto" onChange="setSelector(this)" disabled>
+        <option value=""></option>
+%TEMPLATE_BLOCKBEGIN_proto%
+        <option value="%TEMPLATE_VARIABLE_proto%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_protoup%</option>
+%TEMPLATE_BLOCKEND_proto%
+      </select>
+    </div>
+    <div class="forwarder-start">
+      <!-- <select class="forwarder-start" name="start" %TEMPLATE_VARIABLE_wf%> -->
+      <select class="forwarder-start" name="start" disabled>
+        <option value="serverfirst" %TEMPLATE_VARIABLE_sf%>server first</option>
+        <option value="clientfirst" %TEMPLATE_VARIABLE_cf%>client first</option>
+      </select>
+    </div>
+    <div class="fselector">
+      <!-- <select class="fselector" name="selector" %TEMPLATE_VARIABLE_wf%> -->
+      <select class="fselector" name="selector" disabled>
+        <option value=" " %TEMPLATE_VARIABLE_xflg%> </option>
+%TEMPLATE_BLOCKBEGIN_selector%
+        <option value="%TEMPLATE_VARIABLE_ch%" %TEMPLATE_VARIABLE_flg%>%TEMPLATE_VARIABLE_ch%</option>
+%TEMPLATE_BLOCKEND_selector%
+      </select>
+    </div>
+    <div  class="fkeydir">
+      <select class="fkeydir" name="keydir" disabled>
+        <option value=""></option>
+%TEMPLATE_BLOCKBEGIN_keys%
+        <option value="%TEMPLATE_VARIABLE_key%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_key%</option>
+%TEMPLATE_BLOCKEND_keys%
+      </select>
+    </div>
+
+    <div class="fip">
+      <select name="ip" disabled>
+%TEMPLATE_BLOCKBEGIN_ip%
+        <option value="%TEMPLATE_VARIABLE_ip%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_ip%</option>
+%TEMPLATE_BLOCKEND_ip%
+      </select>
+    </div>
+    <div class="fport"><input type="text" class="fport" name="port" value="%TEMPLATE_VARIABLE_port%" readonly /></div>
+    <div class="fhost"><input type="text" class="fhost" name="host" value="%TEMPLATE_VARIABLE_server%" readonly /></div>
+    <div class="fsubmit"><input class="submit" type="submit" name="submit" value="remove" /></div>
+
+    <div class="forwarder-submit2"><input class="submit" type="submit" name="submit" value="restart" /></div>
+    <div class="forwarder-submit2 submit"><a class="submit" href="log.dynhtml?name=%TEMPLATE_VARIABLE_name%">log</a></div>
+    <div class="fstatus">%TEMPLATE_VARIABLE_status%</div>
+  </div><div class="lineend"></div>
+</form>
+%TEMPLATE_BLOCKEND_forwarder%
+
+
+%TEMPLATE_BLOCKBEGIN_more%
+<!-- TODO: no more forwarder -->
+%TEMPLATE_BLOCKEND_more%
+
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html

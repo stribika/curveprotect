@@ -1,0 +1,77 @@
+div.fnum{
+  float: left;
+  width: 20px;
+  margin: 4px 4px 4px 14px;
+}
+input.fnum {
+  font-weight: bold;
+}
+div.fname{
+  float: left;
+  width: 80px;
+  margin: 4px 4px 4px 14px;
+}
+input.fname {
+  font-weight: bold;
+}
+div.fip{
+  float: left;
+  width: 100px;
+  margin: 4px 4px 4px 4px;
+}
+div.fport{
+  float: left;
+  width: 40px;
+  margin: 4px 4px 4px 4px;
+}
+div.fhost{
+  float: left;
+  width: 140px;
+  margin: 4px 4px 4px 4px;
+}
+div.fproto{
+  float: left;
+  width: 80px;
+  margin: 4px 4px 4px 4px;
+}
+div.forwarder-start {
+  float: left;
+  width: 90px;
+  margin: 4px 4px 4px 4px;
+}
+div.fselector{
+  float: left;
+  width: 40px;
+  margin: 4px 4px 4px 4px;
+}
+input.fkeydir {
+  width: 100%;
+}
+div.fkeydir{
+  float: left;
+  width: 130px;
+  margin: 4px 4px 4px 4px;
+}
+div.fsubmit {
+  float: left;
+  width: 70px;
+  margin: 4px 14px 4px 4px;
+}
+
+div.forwarder-submit2 {
+  float: left;
+  width: 60px;
+  margin: 4px 4px 4px 4px;
+}
+div.fstatus {
+  float: left;
+  width: 110px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.forwarder-separator {
+  float: left;
+  height: 10px;
+  width: 100%;
+}
+

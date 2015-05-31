@@ -1,0 +1,9 @@
+diff -Nur djbdns-1.05.orig/response.c djbdns-1.05/response.c
+--- djbdns-1.05.orig/response.c	2013-12-04 09:30:09.328369530 +0100
++++ djbdns-1.05/response.c	2013-12-16 14:25:25.049407185 +0100
+@@ -118,4 +118,5 @@
+ {
+   response[2] |= 2;
+   response_len = tctarget;
++  byte_zero(response + 6, 6);
+ }

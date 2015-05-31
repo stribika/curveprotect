@@ -1,0 +1,26 @@
+#!/bin/sh
+exec 2>&1
+PATH="_CURVEPROTECT_/bin:${PATH}"
+export PATH
+service="httpd"
+export service
+
+#XXX
+cp -f /etc/localtime _CURVEPROTECT_/etc/localtime
+
+exec envdir "_CURVEPROTECT_/etc/${service}/env" envuidgid _CPUSR_ sh -c '
+  USRUID=$UID
+  export USRUID
+  USRGID=$GID
+  export USRGID
+  if [ x"${DEBUG}" != x ]; then
+    RECORDIO=recordio
+  fi
+  if [ x"${ROOT}" != x ]; then
+    if [ x"${TMPDIR}" != x ]; then
+      rm -f "${ROOT}/${TMPDIR}/"*
+    fi
+  fi
+  lock=_CURVEPROTECT_/var/lock/httpd.lock
+  exec setlock "${lock}" envuidgid _CPCFG_ softlimit -f10000000 -a1000000000 -o40 nettcpserver -c20 "${IP}" "${PORT}" ${RECORDIO} "${service}" "${ROOT}"
+'

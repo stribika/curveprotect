@@ -1,0 +1,34 @@
+div.keys-name{
+  float: left;
+  width: 160px;
+  margin: 4px 4px 4px 14px;
+}
+input.keys-name {
+  font-weight: bold;
+}
+div.keys-pk{
+  float: left;
+  width: 450px;
+  margin: 4px 4px 4px 4px;
+}
+div.keys-mtime{
+  float: left;
+  width: 150px;
+  margin: 4px 4px 4px 4px;
+}
+div.keys-submit {
+  float: left;
+  width: 80px;
+  margin: 4px 14px 4px 24px;
+}
+div.keys-separator {
+  float: left;
+  height: 18px;
+  width: 100%;
+}
+
+div.keys-password {
+  float: left;
+  width: 300px;
+  margin: 4px 4px 4px 4px;
+}

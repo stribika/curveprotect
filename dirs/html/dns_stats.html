@@ -1,0 +1,112 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_stats.css
+</style>
+
+<pre>
+dnscache start:  %TEMPLATE_VARIABLE_dnsfrom%
+statistics from: %TEMPLATE_VARIABLE_from%
+statistics to:   %TEMPLATE_VARIABLE_to%
+seconds:         %TEMPLATE_VARIABLE_seconds%
+queries-in/s:    %TEMPLATE_VARIABLE_queriess%
+queries-out/s:   %TEMPLATE_VARIABLE_xqueries%
+cache hit ratio: %TEMPLATE_VARIABLE_hitratio%
+</pre>
+
+<div class="line label">
+  <div class="name">transmited queries</div>
+  <div class="value1"></div>
+  <div class="value2"></div>
+</div><div class="lineend"></div>
+
+<div class="line">
+  <div class="name">total</div>
+  <div class="value1">%TEMPLATE_VARIABLE_total%</div>
+  <div class="value2">%TEMPLATE_VARIABLE_totalvalue%%</div>
+</div><div class="lineend"></div>
+
+<div class="line">
+  <div class="name">local (secure)</div>
+  <div class="value1">%TEMPLATE_VARIABLE_local%</div>
+  <div class="value2">%TEMPLATE_VARIABLE_localvalue%%</div>
+</div><div class="lineend"></div>
+
+<div class="line">
+  <div class="name">DNSCurve (secure)</div>
+  <div class="value1">%TEMPLATE_VARIABLE_dnscurve%</div>
+  <div class="value2">%TEMPLATE_VARIABLE_dnscurvevalue%%</div>
+</div><div class="lineend"></div>
+
+<div class="line warn">
+  <div class="name">regular (not protected)</div>
+  <div class="value1">%TEMPLATE_VARIABLE_regular%</div>
+  <div class="value2">%TEMPLATE_VARIABLE_regularvalue%%</div>
+</div><div class="lineend"></div>
+<div class="separator"></div>
+
+<div class="line label">
+  <div class="name">transport</div>
+  <div class="value1"></div>
+  <div class="value2"></div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_transport%
+<div class="line">
+  <div class="name">%TEMPLATE_VARIABLE_key%</div>
+  <div class="value1"></div>
+  <div class="value2">%TEMPLATE_VARIABLE_value%%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_transport%
+<div class="separator"></div>
+
+
+<div class="line label">
+  <div class="name">query types</div>
+  <div class="value1"></div>
+  <div class="value2"></div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_querytypes%
+<div class="line">
+  <div class="name">%TEMPLATE_VARIABLE_key%</div>
+  <div class="value1"></div>
+  <div class="value2">%TEMPLATE_VARIABLE_value%%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_querytypes%
+<div class="separator"></div>
+
+
+<div class="line label">
+  <div class="name">cache motion</div>
+  <div class="value1"></div>
+  <div class="value2"></div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_cachemotion%
+<div class="line">
+  <div class="name">%TEMPLATE_VARIABLE_key%</div>
+  <div class="value1"></div>
+  <div class="value2">%TEMPLATE_VARIABLE_value%MB</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_cachemotion%
+<div class="separator"></div>
+
+%TEMPLATE_BLOCKBEGIN_tables%
+<div class="line label">
+  <div class="name">%TEMPLATE_VARIABLE_text%</div>
+  <div class="value1"></div>
+  <div class="value2"></div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKBEGIN_xxxx%
+<div class="line%TEMPLATE_VARIABLE_class%">
+  <div class="name">%TEMPLATE_VARIABLE_key%</div>
+  <div class="value1"></div>
+  <div class="value2"></div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_xxxx%
+<div class="separator"></div>
+%TEMPLATE_BLOCKEND_tables%
+
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html

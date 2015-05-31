@@ -1,0 +1,64 @@
+diff -Nur nacl-20110221.orig/curvecp/curvecpmessage.c nacl-20110221/curvecp/curvecpmessage.c
+--- nacl-20110221.orig/curvecp/curvecpmessage.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221/curvecp/curvecpmessage.c	2011-10-31 12:52:10.727215587 +0100
+@@ -135,6 +135,9 @@
+ 
+ long long lastpanic = 0;
+ 
++int childdied = 0;
++int pollret;
++
+ void earliestblocktime_compute(void) /* XXX: use priority queue */
+ {
+   long long i;
+@@ -304,7 +307,10 @@
+     else
+       timeout = (nextaction - recent) / 1000000 + 1;
+ 
+-    if (poll(p,q - p,timeout) < 0) {
++    /* XXX */
++    if (childdied) timeout = 10;
++    pollret = poll(p,q - p,timeout);
++    if (pollret < 0) {
+       watch8 = 0;
+       watchtochild = 0;
+       watchfromchild = 0;
+@@ -314,6 +320,11 @@
+       if (watchfromchild) if (!watchfromchild->revents) watchfromchild = 0;
+     }
+ 
++    /* XXX */
++    if (childdied && !pollret) {
++        if (childdied++ > 999) goto finish;
++    }
++
+     /* XXX: keepalives */
+ 
+     do { /* try receiving data from child: */
+@@ -642,12 +653,23 @@
+       tochild[1] = -1;
+     } while(0);
+ 
++    /* XXX */
++    if (!childdied){
++        if (waitpid(child,&childstatus, WNOHANG) > 0) {
++          close(tochild[1]);
++          tochild[1] = -1;
++          childdied = 1;
++        }
++    }
+   }
+ 
++  if (!childdied) {
++    do {
++      r = waitpid(child,&childstatus,0);
++    } while (r == -1 && errno == EINTR);
++  }
+ 
+-  do {
+-    r = waitpid(child,&childstatus,0);
+-  } while (r == -1 && errno == EINTR);
++finish:
+ 
+   if (!WIFEXITED(childstatus)) { errno = 0; die_fatal("process killed by signal",0,0); }
+   return WEXITSTATUS(childstatus);

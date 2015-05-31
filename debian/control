@@ -1,0 +1,21 @@
+Source: curveprotect
+Section: net
+Priority: optional
+Build-Depends: debhelper, build-essential, python-support
+Maintainer: Jan Mojzis <jan.mojzis@gmail.com>
+
+Package: curveprotect
+Section: net
+Depends: ${shlibs:Depends}, net-tools, ${python:Depends}
+Provides: curveprotect-bin
+Replaces: curveprotect-bin
+Conflicts: curveprotect-bin
+Architecture: any
+Description: Curveprotect
+
+Package: curveprotect-bin
+Section: net
+Depends: ${shlibs:Depends}
+Architecture: any
+Description: Curveprotect binaries
+

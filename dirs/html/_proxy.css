@@ -1,0 +1,53 @@
+
+div.proxy-name {
+  float: left;
+  width: 80px;
+  margin: 4px 4px 4px 4px;
+}
+input.proxy-name {
+  font-weight: bold;
+}
+
+input.proxy-keydir {
+  width: 100%;
+}
+div.proxy-keydir{
+  float: left;
+  width: 130px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.proxy-encryption {
+  float: left;
+  width: 140px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.proxy-ipv6 {
+  float: left;
+  width: 70px;
+  margin: 4px 4px 4px 4px;
+}
+
+div.proxy-submit {
+  float: left;
+  width: 80px;
+  margin: 4px 14px 4px 4px;
+}
+div.proxy-submit2 {
+  float: left;
+  width: 60px;
+  margin: 4px 4px 4px 4px;
+}
+div.proxy-status {
+  float: left;
+  width: 180px;
+  margin: 4px 4px 4px 4px;
+}
+div.proxy-info {
+  float: left;
+  width: 180px;
+  margin: 4px 4px 4px 4px;
+  font-weight: bold;
+  text-transform:uppercase;
+}

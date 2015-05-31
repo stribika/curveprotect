@@ -1,0 +1,285 @@
+@node Knot DNS Configuration, Running Knot DNS, Knot DNS Installation, Top
+@chapter Knot DNS Configuration
+
+In this chapter we provide suggested configurations and explain the meaning of individual configuration options.
+
+@menu
+* Minimal configuration::
+* Slave configuration::
+* Master configuration::
+* Configuring multiple interfaces::
+* Using DNS UPDATE::
+* Remote control interface::
+* Enabling zone semantic checks::
+* Creating IXFR differences from zone file changes::
+* Using Response Rate Limiting::
+@end menu
+
+@node Minimal configuration
+@section Minimal configuration
+
+The following configuration presents a minimal configuration
+file which can be used as a base for your Knot DNS setup.
+
+@example
+
+# This is a sample of a minimal configuration file for Knot DNS.
+#
+# For exhaustive list of all options see samples/knot.full.conf
+# in the source directory.
+#
+
+system @{
+  storage "/var/lib/knot";
+@}
+
+interfaces @{
+  my_interface @{ address 127.0.0.1@@53; @}
+  second_int @{ address ::1; @}
+@}
+
+log @{
+  syslog @{ any notice, warning, error; @}
+@}
+
+zones @{
+  example.com @{
+    file "/etc/knot/example.com";
+  @}
+@}
+
+@end example
+
+@page
+Now let's go step by step through this minimal configuration file:
+
+@enumerate
+
+@item
+In @code{system} statement we have configured @code{storage}
+directory where Knot DNS will store slave zones and journal files.
+(See @ref{system} and @ref{storage})
+
+@item
+The @code{interfaces} statement defines interfaces where Knot
+DNS will listen for incoming connections. We have defined two
+interfaces: one IPv4 called @kbd{my_interface} explicitly listening
+on port 53 and second IPv6 called @kbd{second_int} also listening on
+port 53, which is the default port for the DNS. See @ref{interfaces}.
+
+@item
+The @code{log} statement defines the log facilities for Knot DNS.
+In this example we told Knot DNS to send its log messages with the severities
+@code{debug}, @code{warning} and @code{notice} into the syslog.
+If you omit this sections, all severities will printed to
+either @code{stdout} or @code{stderr}, and the severities
+from the @code{warning} and more serious to syslog. You can find all
+possible combinations in the @ref{log}.
+
+@item
+The @code{zones} statement is probably the most important one,
+because it defines the zones that Knot DNS will serve.  In its most simple
+form you can define a zone by its name and zone file.
+@end enumerate
+
+@page
+@node Slave configuration
+@section Slave configuration
+
+Knot DNS doesn't strictly differ between master and slave zones.
+The only requirement is to have @code{xfr-in} @code{zones} statement set for given zone,
+thus allowing both incoming XFR from that remote and using it as the
+zone master. If @code{update-in} is set and zone has a master,
+any accepted DNS UPDATE will be forwarded to master.
+Also note that you need to explicitly allow incoming NOTIFY, otherwise
+the daemon would reject them.
+Also, you can specify paths, relative to the storage directory.
+See @ref{zones} and @ref{storage}.
+If the zone file doesn't exist and @code{xfr-in} is set, it will be bootstrapped over AXFR.
+
+@example
+remotes @{
+  master @{ address 127.0.0.1@@53; @}
+  subnet1 @{ address 192.168.1.0/24; @}
+@}
+zones @{
+  example.com @{
+    file "example.com"; # relative to 'storage'
+    xfr-in master;      # define 'master' for this zone
+    notify-in master;   # also allow NOTIFY from 'master'
+    update-in subnet1;  # accept UPDATE msgs from subnet1 and forward
+                        # to master
+  @}
+@}
+@end example
+
+You can also use TSIG for access control. For this, you need to configure a TSIG key
+and assign it to a remote.
+Supported algorithms for TSIG key are:@*
+@code{hmac-md5, hmac-sha1, hmac-sha224, hmac-sha256, hmac-sha384, hmac-sha512}
+@*
+Key secret is written in a base64 encoded format. See @ref{keys}.
+
+@example
+keys @{
+  key0 hmac-md5 "Wg=="; # keyname algorithm secret
+@}
+remotes @{
+  master @{ address 127.0.0.1@@53; key key0; @}
+@}
+zones @{
+  example.com @{
+    file "example.com"; # relative to 'storage'
+    xfr-in master;      # define 'master' for this zone
+    notify-in master;   # also allow NOTIFY from 'master'
+  @}
+@}
+@end example
+
+As of now it is not possible to associate multiple keys with a remote.
+
+@page
+@node Master configuration
+@section Master configuration
+
+You can specify which remotes to allow for outgoing XFR and NOTIFY @code{zones}.
+
+@example
+remotes @{
+  slave @{ address 127.0.0.1@@53; @}
+  any @{ address 0.0.0.0/0; @}
+  subnet1 @{ address 192.168.1.0/8; @}
+  subnet2 @{ address 192.168.2.0/8; @}
+@}
+zones @{
+  example.com @{
+    file "/var/zones/example.com";
+    xfr-out subnet1, subnet2; # allow outgoing transfers
+    notify-out slave;
+    update-in subnet1; # only allow DNS UPDATE from subnet1
+  @}
+@}
+@end example
+
+You can also secure outgoing XFRs with TSIG.
+
+@example
+keys @{
+  key0 hmac-md5 "Wg=="; # keyname algorithm secret
+@}
+remotes @{
+  any @{ address 0.0.0.0/0; key key0; @}
+@}
+zones @{
+  example.com @{
+    file "/var/zones/example.com";
+    xfr-out any; # uses 'any' remote secured with TSIG key 'key0'
+  @}
+@}
+@end example
+
+@node Configuring multiple interfaces
+@section Configuring multiple interfaces
+
+Knot DNS support binding to multiple available interfaces in the @code{interfaces} section.
+@*You can also use the special addresses for "any address" like @code{0.0.0.0} or @code{[::]}.
+
+@example
+interfaces @{
+  if1 @{ address 192.168.1.2@@53; @}
+  anyv6 @{ address [::]@@53; @}
+@}
+@end example
+
+@node Using DNS UPDATE
+@section Using DNS UPDATE
+
+As noted in examples for master and slave, it is possible to accept DNS UPDATE messages.
+When the zone is configured as a slave and DNS UPDATE messages is accepted, server forwards the
+message to its primary master specified by @code{xfr-in} directive. When it receives
+the response from primary master, it forwards it back to the originator. This finishes the transaction.
+
+However, if the zone is configured as master (i.e. not having any @code{xfr-in} directive), it accepts
+such an UPDATE and processes it. As of 1.2, there are a few limitations with DNSSEC signed zones described below. Other than that, UPDATE of unsigned zones works as expected without any limitations.
+
+@itemize @bullet
+@item
+Knot DNS doesn't automatically sign incoming RR if the zone is signed.
+As a workaround, it accepts DNSSEC-related records. However, it may prove challenging
+to create such an UPDATE that it correctly adds/replaces signed RRs, so this
+feature should be treated as experimental until correct signing is implemented.
+
+@item
+As for the reason in a previous point, removing RRSIG with no specified rdata makes it impossible
+to determine whether the user meant a RRSIG for an NSEC3 record or other one.
+Since they are stored separately, it is advisable to always specify RRSIG along with at least the types it covers.
+
+@item
+Deleting a last RR also removes its RRSIG.
+
+@end itemize
+
+@node Remote control interface
+@section Remote control interface
+
+As of v1.3.0, it is possible to control running daemon using UNIX sockets,
+which is also preferred over internet sockets. You don't need any specific configuration,
+since it is enabled by default and the UNIX socket is placed in the rundir.
+To disable remote control completely, add an empty @code{control} section to the
+configuration like:
+
+@example
+control @{ @}
+@end example
+
+However you can still use IPv4/IPv6 address, although with several shortcomings.
+You then can use @code{allow} for an ACL list similar to @code{xfr-in} or @code{xfr-out},
+see that for syntax reference. The @code{listen-on} has syntax equal to an interface specification,
+but the default port for remote control protocol is @code{5533}.
+However keep in mind, that the transferred data isn't encrypted and could be
+susceptible to replay attack in a short timeframe.
+
+Example configuration:
+@example
+control @{
+	listen-on @{ address 127.0.0.1@@5533; @}
+@}
+@end example
+
+@node Enabling zone semantic checks
+@section Enabling zone semantic checks
+You can turn on more detailed semantic
+checks of zone file in this @code{zones} statement (@pxref{zones}). Refer to @ref{zones List of zone semantic checks} to see
+which checks are enabled by default and which are optional.
+
+@node Creating IXFR differences from zone file changes
+@section Creating IXFR differences from zone file changes
+If Knot is being run as a master server, experimental feature @code{ixfr-from-differences}
+can be enabled to create IXFR differences from changes made to the master zone file.
+See @ref{Controlling running daemon} for more information. For more about @code{zones} statement see @ref{zones}.
+
+@node Using Response Rate Limiting
+@section Using Response Rate Limiting
+
+Response rate limiting (RRL) is a method to combat recent DNS reflection amplification attacks.
+These attacked rely on the fact that source address of a UDP query could be forged,
+and without a worldwide deployment of BCP38, such a forgery could not be detected.
+Attacker could then exploit DNS server responding to every query, potentially flooding the
+victim with a large unsolicited DNS responses.
+
+As of Knot DNS version 1.2.0, RRL is compiled in, but disabled by default.
+You can enable it with the @ref{rate-limit} option in the @ref{system} section.
+Setting to a value greater than @code{0} means that every flow is allowed N responses per second,
+(i.e. @code{rate-limit 50;} means @code{50} responses per second).
+It is also possible to configure SLIP interval, which causes every Nth blocked response to be slipped
+as a truncated response. Not that some error responses cannot be truncated and are slipped as-is.
+For more information, refer to @ref{rate-limit-slip}.
+It is advisable to not set slip interval to a value larger than 1.
+
+Example configuration:
+@example
+system @{
+	rate-limit 200;    # Each flow is allowed to 200 resp. per second
+	rate-limit-slip 1; # Every response is slipped (default)
+@}
+@end example

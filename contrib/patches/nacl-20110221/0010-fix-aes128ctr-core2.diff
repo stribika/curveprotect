@@ -1,0 +1,398 @@
+diff -Nur nacl-20110221.orig/crypto_stream/aes128ctr/core2/xor_afternm.s nacl-20110221/crypto_stream/aes128ctr/core2/xor_afternm.s
+--- nacl-20110221.orig/crypto_stream/aes128ctr/core2/xor_afternm.s	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221/crypto_stream/aes128ctr/core2/xor_afternm.s	2013-08-04 18:30:30.831928981 +0200
+@@ -1,4 +1,4 @@
+-# Author: Emilia KÃ¤sper and Peter Schwabe
++# Author: Emilia Käsper and Peter Schwabe
+ # Date: 2009-03-19
+ # +2010.01.31: minor namespace modifications
+ # Public domain
+@@ -12054,85 +12054,129 @@
+ # asm 2: movl   <tmp=%r9d,12(<np=%rcx)
+ movl   %r9d,12(%rcx)
+ 
+-# qhasm: xmm8 ^= *(int128 *)(inp + 0)
+-# asm 1: pxor 0(<inp=int64#2),<xmm8=int6464#9
+-# asm 2: pxor 0(<inp=%rsi),<xmm8=%xmm8
+-pxor 0(%rsi),%xmm8
+-
+-# qhasm: xmm9 ^= *(int128 *)(inp + 16)
+-# asm 1: pxor 16(<inp=int64#2),<xmm9=int6464#10
+-# asm 2: pxor 16(<inp=%rsi),<xmm9=%xmm9
+-pxor 16(%rsi),%xmm9
+-
+-# qhasm: xmm12 ^= *(int128 *)(inp + 32)
+-# asm 1: pxor 32(<inp=int64#2),<xmm12=int6464#13
+-# asm 2: pxor 32(<inp=%rsi),<xmm12=%xmm12
+-pxor 32(%rsi),%xmm12
+-
+-# qhasm: xmm14 ^= *(int128 *)(inp + 48)
+-# asm 1: pxor 48(<inp=int64#2),<xmm14=int6464#15
+-# asm 2: pxor 48(<inp=%rsi),<xmm14=%xmm14
+-pxor 48(%rsi),%xmm14
+-
+-# qhasm: xmm11 ^= *(int128 *)(inp + 64)
+-# asm 1: pxor 64(<inp=int64#2),<xmm11=int6464#12
+-# asm 2: pxor 64(<inp=%rsi),<xmm11=%xmm11
+-pxor 64(%rsi),%xmm11
+-
+-# qhasm: xmm15 ^= *(int128 *)(inp + 80)
+-# asm 1: pxor 80(<inp=int64#2),<xmm15=int6464#16
+-# asm 2: pxor 80(<inp=%rsi),<xmm15=%xmm15
+-pxor 80(%rsi),%xmm15
+-
+-# qhasm: xmm10 ^= *(int128 *)(inp + 96)
+-# asm 1: pxor 96(<inp=int64#2),<xmm10=int6464#11
+-# asm 2: pxor 96(<inp=%rsi),<xmm10=%xmm10
+-pxor 96(%rsi),%xmm10
+-
+-# qhasm: xmm13 ^= *(int128 *)(inp + 112)
+-# asm 1: pxor 112(<inp=int64#2),<xmm13=int6464#14
+-# asm 2: pxor 112(<inp=%rsi),<xmm13=%xmm13
+-pxor 112(%rsi),%xmm13
++### BEGIN NEW CODE ###
++
++# qhasm: t = *(int128 *)(inp + 0)
++# asm 1: movdqu 0(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 0(<inp=%rsi),>t=%xmm0
++movdqu 0(%rsi),%xmm0
++
++# qhasm: xmm8 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm8=int6464#9
++# asm 2: pxor  <t=%xmm0,<xmm8=%xmm8
++pxor  %xmm0,%xmm8
++
++# qhasm: t = *(int128 *)(inp + 16)
++# asm 1: movdqu 16(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 16(<inp=%rsi),>t=%xmm0
++movdqu 16(%rsi),%xmm0
++
++# qhasm: xmm9 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm9=int6464#10
++# asm 2: pxor  <t=%xmm0,<xmm9=%xmm9
++pxor  %xmm0,%xmm9
++
++# qhasm: t = *(int128 *)(inp + 32)
++# asm 1: movdqu 32(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 32(<inp=%rsi),>t=%xmm0
++movdqu 32(%rsi),%xmm0
++
++# qhasm: xmm12 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm12=int6464#13
++# asm 2: pxor  <t=%xmm0,<xmm12=%xmm12
++pxor  %xmm0,%xmm12
++
++# qhasm: t = *(int128 *)(inp + 48)
++# asm 1: movdqu 48(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 48(<inp=%rsi),>t=%xmm0
++movdqu 48(%rsi),%xmm0
++
++# qhasm: xmm14 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm14=int6464#15
++# asm 2: pxor  <t=%xmm0,<xmm14=%xmm14
++pxor  %xmm0,%xmm14
++
++# qhasm: t = *(int128 *)(inp + 64)
++# asm 1: movdqu 64(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 64(<inp=%rsi),>t=%xmm0
++movdqu 64(%rsi),%xmm0
++
++# qhasm: xmm11 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm11=int6464#12
++# asm 2: pxor  <t=%xmm0,<xmm11=%xmm11
++pxor  %xmm0,%xmm11
++
++# qhasm: t = *(int128 *)(inp + 80)
++# asm 1: movdqu 80(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 80(<inp=%rsi),>t=%xmm0
++movdqu 80(%rsi),%xmm0
++
++# qhasm: xmm15 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm15=int6464#16
++# asm 2: pxor  <t=%xmm0,<xmm15=%xmm15
++pxor  %xmm0,%xmm15
++
++# qhasm: t = *(int128 *)(inp + 96)
++# asm 1: movdqu 96(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 96(<inp=%rsi),>t=%xmm0
++movdqu 96(%rsi),%xmm0
++
++# qhasm: xmm10 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm10=int6464#11
++# asm 2: pxor  <t=%xmm0,<xmm10=%xmm10
++pxor  %xmm0,%xmm10
++
++# qhasm: t = *(int128 *)(inp + 112)
++# asm 1: movdqu 112(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 112(<inp=%rsi),>t=%xmm0
++movdqu 112(%rsi),%xmm0
++
++# qhasm: xmm13 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm13=int6464#14
++# asm 2: pxor  <t=%xmm0,<xmm13=%xmm13
++pxor  %xmm0,%xmm13
+ 
+ # qhasm: *(int128 *) (outp + 0) = xmm8
+-# asm 1: movdqa <xmm8=int6464#9,0(<outp=int64#1)
+-# asm 2: movdqa <xmm8=%xmm8,0(<outp=%rdi)
+-movdqa %xmm8,0(%rdi)
++# asm 1: movdqu <xmm8=int6464#9,0(<outp=int64#1)
++# asm 2: movdqu <xmm8=%xmm8,0(<outp=%rdi)
++movdqu %xmm8,0(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 16) = xmm9
+-# asm 1: movdqa <xmm9=int6464#10,16(<outp=int64#1)
+-# asm 2: movdqa <xmm9=%xmm9,16(<outp=%rdi)
+-movdqa %xmm9,16(%rdi)
++# asm 1: movdqu <xmm9=int6464#10,16(<outp=int64#1)
++# asm 2: movdqu <xmm9=%xmm9,16(<outp=%rdi)
++movdqu %xmm9,16(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 32) = xmm12
+-# asm 1: movdqa <xmm12=int6464#13,32(<outp=int64#1)
+-# asm 2: movdqa <xmm12=%xmm12,32(<outp=%rdi)
+-movdqa %xmm12,32(%rdi)
++# asm 1: movdqu <xmm12=int6464#13,32(<outp=int64#1)
++# asm 2: movdqu <xmm12=%xmm12,32(<outp=%rdi)
++movdqu %xmm12,32(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 48) = xmm14
+-# asm 1: movdqa <xmm14=int6464#15,48(<outp=int64#1)
+-# asm 2: movdqa <xmm14=%xmm14,48(<outp=%rdi)
+-movdqa %xmm14,48(%rdi)
++# asm 1: movdqu <xmm14=int6464#15,48(<outp=int64#1)
++# asm 2: movdqu <xmm14=%xmm14,48(<outp=%rdi)
++movdqu %xmm14,48(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 64) = xmm11
+-# asm 1: movdqa <xmm11=int6464#12,64(<outp=int64#1)
+-# asm 2: movdqa <xmm11=%xmm11,64(<outp=%rdi)
+-movdqa %xmm11,64(%rdi)
++# asm 1: movdqu <xmm11=int6464#12,64(<outp=int64#1)
++# asm 2: movdqu <xmm11=%xmm11,64(<outp=%rdi)
++movdqu %xmm11,64(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 80) = xmm15
+-# asm 1: movdqa <xmm15=int6464#16,80(<outp=int64#1)
+-# asm 2: movdqa <xmm15=%xmm15,80(<outp=%rdi)
+-movdqa %xmm15,80(%rdi)
++# asm 1: movdqu <xmm15=int6464#16,80(<outp=int64#1)
++# asm 2: movdqu <xmm15=%xmm15,80(<outp=%rdi)
++movdqu %xmm15,80(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 96) = xmm10
+-# asm 1: movdqa <xmm10=int6464#11,96(<outp=int64#1)
+-# asm 2: movdqa <xmm10=%xmm10,96(<outp=%rdi)
+-movdqa %xmm10,96(%rdi)
++# asm 1: movdqu <xmm10=int6464#11,96(<outp=int64#1)
++# asm 2: movdqu <xmm10=%xmm10,96(<outp=%rdi)
++movdqu %xmm10,96(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 112) = xmm13
+-# asm 1: movdqa <xmm13=int6464#14,112(<outp=int64#1)
+-# asm 2: movdqa <xmm13=%xmm13,112(<outp=%rdi)
+-movdqa %xmm13,112(%rdi)
++# asm 1: movdqu <xmm13=int6464#14,112(<outp=int64#1)
++# asm 2: movdqu <xmm13=%xmm13,112(<outp=%rdi)
++movdqu %xmm13,112(%rdi)
++
++### END NEW CODE ###
+ 
+ # qhasm: len -= 128
+ # asm 1: sub  $128,<len=int64#3
+@@ -12315,85 +12359,132 @@
+ # asm 2: movl   <tmp=%edx,12(<np=%rcx)
+ movl   %edx,12(%rcx)
+ 
+-# qhasm: xmm8 ^= *(int128 *)(inp + 0)
+-# asm 1: pxor 0(<inp=int64#2),<xmm8=int6464#9
+-# asm 2: pxor 0(<inp=%rsi),<xmm8=%xmm8
+-pxor 0(%rsi),%xmm8
+-
+-# qhasm: xmm9 ^= *(int128 *)(inp + 16)
+-# asm 1: pxor 16(<inp=int64#2),<xmm9=int6464#10
+-# asm 2: pxor 16(<inp=%rsi),<xmm9=%xmm9
+-pxor 16(%rsi),%xmm9
+-
+-# qhasm: xmm12 ^= *(int128 *)(inp + 32)
+-# asm 1: pxor 32(<inp=int64#2),<xmm12=int6464#13
+-# asm 2: pxor 32(<inp=%rsi),<xmm12=%xmm12
+-pxor 32(%rsi),%xmm12
+-
+-# qhasm: xmm14 ^= *(int128 *)(inp + 48)
+-# asm 1: pxor 48(<inp=int64#2),<xmm14=int6464#15
+-# asm 2: pxor 48(<inp=%rsi),<xmm14=%xmm14
+-pxor 48(%rsi),%xmm14
+-
+-# qhasm: xmm11 ^= *(int128 *)(inp + 64)
+-# asm 1: pxor 64(<inp=int64#2),<xmm11=int6464#12
+-# asm 2: pxor 64(<inp=%rsi),<xmm11=%xmm11
+-pxor 64(%rsi),%xmm11
+-
+-# qhasm: xmm15 ^= *(int128 *)(inp + 80)
+-# asm 1: pxor 80(<inp=int64#2),<xmm15=int6464#16
+-# asm 2: pxor 80(<inp=%rsi),<xmm15=%xmm15
+-pxor 80(%rsi),%xmm15
+-
+-# qhasm: xmm10 ^= *(int128 *)(inp + 96)
+-# asm 1: pxor 96(<inp=int64#2),<xmm10=int6464#11
+-# asm 2: pxor 96(<inp=%rsi),<xmm10=%xmm10
+-pxor 96(%rsi),%xmm10
+-
+-# qhasm: xmm13 ^= *(int128 *)(inp + 112)
+-# asm 1: pxor 112(<inp=int64#2),<xmm13=int6464#14
+-# asm 2: pxor 112(<inp=%rsi),<xmm13=%xmm13
+-pxor 112(%rsi),%xmm13
++
++### NEW CODE FROM HERE ###
++
++
++# qhasm: t = *(int128 *)(inp + 0)
++# asm 1: movdqu 0(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 0(<inp=%rsi),>t=%xmm0
++movdqu 0(%rsi),%xmm0
++
++# qhasm: xmm8 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm8=int6464#9
++# asm 2: pxor  <t=%xmm0,<xmm8=%xmm8
++pxor  %xmm0,%xmm8
++
++# qhasm: t = *(int128 *)(inp + 16)
++# asm 1: movdqu 16(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 16(<inp=%rsi),>t=%xmm0
++movdqu 16(%rsi),%xmm0
++
++# qhasm: xmm9 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm9=int6464#10
++# asm 2: pxor  <t=%xmm0,<xmm9=%xmm9
++pxor  %xmm0,%xmm9
++
++# qhasm: t = *(int128 *)(inp + 32)
++# asm 1: movdqu 32(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 32(<inp=%rsi),>t=%xmm0
++movdqu 32(%rsi),%xmm0
++
++# qhasm: xmm12 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm12=int6464#13
++# asm 2: pxor  <t=%xmm0,<xmm12=%xmm12
++pxor  %xmm0,%xmm12
++
++# qhasm: t = *(int128 *)(inp + 48)
++# asm 1: movdqu 48(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 48(<inp=%rsi),>t=%xmm0
++movdqu 48(%rsi),%xmm0
++
++# qhasm: xmm14 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm14=int6464#15
++# asm 2: pxor  <t=%xmm0,<xmm14=%xmm14
++pxor  %xmm0,%xmm14
++
++# qhasm: t = *(int128 *)(inp + 64)
++# asm 1: movdqu 64(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 64(<inp=%rsi),>t=%xmm0
++movdqu 64(%rsi),%xmm0
++
++# qhasm: xmm11 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm11=int6464#12
++# asm 2: pxor  <t=%xmm0,<xmm11=%xmm11
++pxor  %xmm0,%xmm11
++
++# qhasm: t = *(int128 *)(inp + 80)
++# asm 1: movdqu 80(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 80(<inp=%rsi),>t=%xmm0
++movdqu 80(%rsi),%xmm0
++
++# qhasm: xmm15 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm15=int6464#16
++# asm 2: pxor  <t=%xmm0,<xmm15=%xmm15
++pxor  %xmm0,%xmm15
++
++# qhasm: t = *(int128 *)(inp + 96)
++# asm 1: movdqu 96(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 96(<inp=%rsi),>t=%xmm0
++movdqu 96(%rsi),%xmm0
++
++# qhasm: xmm10 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm10=int6464#11
++# asm 2: pxor  <t=%xmm0,<xmm10=%xmm10
++pxor  %xmm0,%xmm10
++
++# qhasm: t = *(int128 *)(inp + 112)
++# asm 1: movdqu 112(<inp=int64#2),>t=int6464#1
++# asm 2: movdqu 112(<inp=%rsi),>t=%xmm0
++movdqu 112(%rsi),%xmm0
++
++# qhasm: xmm13 ^= t
++# asm 1: pxor  <t=int6464#1,<xmm13=int6464#14
++# asm 2: pxor  <t=%xmm0,<xmm13=%xmm13
++pxor  %xmm0,%xmm13
+ 
+ # qhasm: *(int128 *) (outp + 0) = xmm8
+-# asm 1: movdqa <xmm8=int6464#9,0(<outp=int64#1)
+-# asm 2: movdqa <xmm8=%xmm8,0(<outp=%rdi)
+-movdqa %xmm8,0(%rdi)
++# asm 1: movdqu <xmm8=int6464#9,0(<outp=int64#1)
++# asm 2: movdqu <xmm8=%xmm8,0(<outp=%rdi)
++movdqu %xmm8,0(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 16) = xmm9
+-# asm 1: movdqa <xmm9=int6464#10,16(<outp=int64#1)
+-# asm 2: movdqa <xmm9=%xmm9,16(<outp=%rdi)
+-movdqa %xmm9,16(%rdi)
++# asm 1: movdqu <xmm9=int6464#10,16(<outp=int64#1)
++# asm 2: movdqu <xmm9=%xmm9,16(<outp=%rdi)
++movdqu %xmm9,16(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 32) = xmm12
+-# asm 1: movdqa <xmm12=int6464#13,32(<outp=int64#1)
+-# asm 2: movdqa <xmm12=%xmm12,32(<outp=%rdi)
+-movdqa %xmm12,32(%rdi)
++# asm 1: movdqu <xmm12=int6464#13,32(<outp=int64#1)
++# asm 2: movdqu <xmm12=%xmm12,32(<outp=%rdi)
++movdqu %xmm12,32(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 48) = xmm14
+-# asm 1: movdqa <xmm14=int6464#15,48(<outp=int64#1)
+-# asm 2: movdqa <xmm14=%xmm14,48(<outp=%rdi)
+-movdqa %xmm14,48(%rdi)
++# asm 1: movdqu <xmm14=int6464#15,48(<outp=int64#1)
++# asm 2: movdqu <xmm14=%xmm14,48(<outp=%rdi)
++movdqu %xmm14,48(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 64) = xmm11
+-# asm 1: movdqa <xmm11=int6464#12,64(<outp=int64#1)
+-# asm 2: movdqa <xmm11=%xmm11,64(<outp=%rdi)
+-movdqa %xmm11,64(%rdi)
++# asm 1: movdqu <xmm11=int6464#12,64(<outp=int64#1)
++# asm 2: movdqu <xmm11=%xmm11,64(<outp=%rdi)
++movdqu %xmm11,64(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 80) = xmm15
+-# asm 1: movdqa <xmm15=int6464#16,80(<outp=int64#1)
+-# asm 2: movdqa <xmm15=%xmm15,80(<outp=%rdi)
+-movdqa %xmm15,80(%rdi)
++# asm 1: movdqu <xmm15=int6464#16,80(<outp=int64#1)
++# asm 2: movdqu <xmm15=%xmm15,80(<outp=%rdi)
++movdqu %xmm15,80(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 96) = xmm10
+-# asm 1: movdqa <xmm10=int6464#11,96(<outp=int64#1)
+-# asm 2: movdqa <xmm10=%xmm10,96(<outp=%rdi)
+-movdqa %xmm10,96(%rdi)
++# asm 1: movdqu <xmm10=int6464#11,96(<outp=int64#1)
++# asm 2: movdqu <xmm10=%xmm10,96(<outp=%rdi)
++movdqu %xmm10,96(%rdi)
+ 
+ # qhasm: *(int128 *) (outp + 112) = xmm13
+-# asm 1: movdqa <xmm13=int6464#14,112(<outp=int64#1)
+-# asm 2: movdqa <xmm13=%xmm13,112(<outp=%rdi)
+-movdqa %xmm13,112(%rdi)
++# asm 1: movdqu <xmm13=int6464#14,112(<outp=int64#1)
++# asm 2: movdqu <xmm13=%xmm13,112(<outp=%rdi)
++movdqu %xmm13,112(%rdi)
++
++### NEW CODE ENDS HERE ###
++
+ # comment:fp stack unchanged by fallthrough
+ 
+ # qhasm: end:

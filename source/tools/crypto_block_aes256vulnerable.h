@@ -1,0 +1,21 @@
+#ifndef _crypto_block_aes256vulnerable_h____
+#define _crypto_block_aes256vulnerable_h____
+
+#define crypto_block_aes256vulnerable_static_KEYBYTES 32
+#define crypto_block_aes256vulnerable_static_BLOCKBYTES 16
+#define crypto_block_aes256vulnerable_static_BEFORENMBYTES 240
+
+extern int crypto_block_aes256vulnerable_static(unsigned char *out, const unsigned char *in, const unsigned char *k);
+extern int crypto_block_aes256vulnerable_static_beforenm(unsigned char *c, const unsigned char *k);
+extern int crypto_block_aes256vulnerable_static_afternm(unsigned char *out, const unsigned char *in, const unsigned char *k);
+
+#define crypto_block_aes256vulnerable crypto_block_aes256vulnerable_static
+#define crypto_block_aes256vulnerable_beforenm crypto_block_aes256vulnerable_static_beforenm
+#define crypto_block_aes256vulnerable_afternm crypto_block_aes256vulnerable_static_afternm
+#define crypto_block_aes256vulnerable_IMPLEMENTATION "static"
+
+#define crypto_block_aes256vulnerable_KEYBYTES crypto_block_aes256vulnerable_static_KEYBYTES
+#define crypto_block_aes256vulnerable_BLOCKBYTES crypto_block_aes256vulnerable_static_BLOCKBYTES
+#define crypto_block_aes256vulnerable_BEFORENMBYTES crypto_block_aes256vulnerable_static_BEFORENMBYTES
+
+#endif

@@ -1,0 +1,3887 @@
+diff -Nur mdempsky-dnscurve-fd16d68/attic/nacl-python.patch mdempsky-dnscurve/attic/nacl-python.patch
+--- mdempsky-dnscurve-fd16d68/attic/nacl-python.patch	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/attic/nacl-python.patch	1970-01-01 01:00:00.000000000 +0100
+@@ -1,674 +0,0 @@
+-Index: nacl-20080914/cpucycles/do
+-===================================================================
+---- nacl-20080914.orig/cpucycles/do	2008-09-14 12:42:13.000000000 -0700
+-+++ nacl-20080914/cpucycles/do	2008-09-18 15:33:22.000000000 -0700
+-@@ -38,6 +38,7 @@
+-             ./test || continue
+-             echo "=== `date` === Success. Using $n.c." >&2
+-             mkdir -p lib/$abi
+-+            mkdir -p lib/$abi-pic
+-             mv cpucycles-impl.o lib/$abi/cpucycles.o
+-             mkdir -p include/$abi
+-             mv cpucycles-impl.h include/$abi/cpucycles.h
+-Index: nacl-20080914/do
+-===================================================================
+---- nacl-20080914.orig/do	2008-09-14 12:42:13.000000000 -0700
+-+++ nacl-20080914/do	2008-09-18 15:41:57.000000000 -0700
+-@@ -139,6 +139,7 @@
+-       rm -rf "$work"
+-       mkdir -p "$work"
+-       mkdir -p "$work/best"
+-+      mkdir -p "$work/best-pic"
+- 
+-       # for each operation primitive abi, loop over implementations
+-       find "$o/$p" -follow -name "api.h" \
+-@@ -259,8 +260,23 @@
+- 	    && cp -p "$op.h" "../$op.h" \
+- 	    && cp -p "$o.h" "../$o.h" \
+-             && cp -p measure ../best/measure \
+-+	    && ok=1 \
+-+	    && for f in $cfiles $sfiles
+-+	    do
+-+	      $compiler -fPIC \
+-+		-I. -I"$include" -I"$include/$abi" \
+-+		-c "$f" >../errors 2>&1 \
+-+	      || ok=0
+-+	    done \
+-+	    && [ "$ok" = 1 ] \
+-+	    && rm -f ../best-pic/*.o \
+-+	    && for f in *.o
+-+	    do
+-+	      cp -p "$f" "../best-pic/${opi}-$f"
+-+	    done \
+- 	    || :
+- 	  done
+-+
+- 	)
+-       done
+- 
+-@@ -273,6 +289,11 @@
+-       && [ -f "$o/$p/selected" ] \
+-       && cp -p "$work/$o.h" "$include/$abi/$o.h" \
+-       || :
+-+
+-+      # Build shared libraries
+-+      cp -p "$work/best-pic/"*.o "$lib/$abi-pic" \
+-+      && linking_cc=$("$bin/okc-$abi" | head -n 1) \
+-+      && $linking_cc -o "$lib/$abi-pic/libnacl.so" -shared "$lib/$abi-pic"/*.o
+-     done
+-   done
+- done
+-Index: nacl-20080914/crypto_smult/curve25519/donna/smult.c
+-===================================================================
+---- nacl-20080914.orig/crypto_smult/curve25519/donna/smult.c	2008-09-14 12:42:13.000000000 -0700
+-+++ nacl-20080914/crypto_smult/curve25519/donna/smult.c	2008-09-18 15:33:22.000000000 -0700
+-@@ -77,7 +77,7 @@
+-  *   xprime zprime: short form, destroyed
+-  *   qmqp: short form, preserved
+-  */
+--void
+-+void __attribute__((visibility ("hidden")))
+- fmonty(felem *x2,  /* output 2Q */
+-        felem *x3,  /* output Q + Q' */
+-        felem *x,    /* input Q */
+-Index: nacl-20080914/bindings/python/generate.sh
+-===================================================================
+---- /dev/null	1970-01-01 00:00:00.000000000 +0000
+-+++ nacl-20080914/bindings/python/generate.sh	2008-09-18 16:04:17.000000000 -0700
+-@@ -0,0 +1,11 @@
+-+echo -n > methods.h
+-+echo -n > includes.h
+-+
+-+for family in hash auth auth1 stream secretbox smult box; do
+-+  for x in `ls -1 /usr/include/nacl/crypto_${family}_*.h`; do
+-+    func=$(basename $x | sed -e "s/crypto_$family\([_a-zA-Z0-9]*\).h/\1/")
+-+    func=${func:1}
+-+    echo "#include <nacl/crypto_${family}_$func.h>" >> includes.h
+-+    echo "function_${family}($func)" >> methods.h
+-+  done
+-+done
+-Index: nacl-20080914/bindings/python/nacl.c
+-===================================================================
+---- /dev/null	1970-01-01 00:00:00.000000000 +0000
+-+++ nacl-20080914/bindings/python/nacl.c	2008-09-18 16:23:28.000000000 -0700
+-@@ -0,0 +1,159 @@
+-+#include <stdint.h>
+-+
+-+#include <sys/types.h>
+-+#include <unistd.h>
+-+#include <fcntl.h>
+-+
+-+#include <Python.h>
+-+
+-+#include <nacl/crypto_verify_16.h>
+-+#include <nacl/crypto_verify_32.h>
+-+
+-+#include "includes.h"
+-+#include "templates.h"
+-+
+-+#include <nacl/crypto_hash.h>
+-+//#include <nacl/crypto_auth.h>
+-+//#include <nacl/crypto_onetimeauth.h>
+-+#include <nacl/crypto_stream.h>
+-+#include <nacl/randombytes.h>
+-+
+-+typedef uint8_t u8;
+-+
+-+int global_urandom_fd;
+-+
+-+void
+-+randombytes(unsigned char *x, unsigned long long xlen) {
+-+  int i;
+-+
+-+  while (xlen > 0) {
+-+    if (xlen < 1048576) i = xlen; else i = 1048576;
+-+
+-+    i = read(global_urandom_fd, x, i);
+-+    if (i < 1) {
+-+      sleep(1);
+-+      continue;
+-+    }
+-+
+-+    x += i;
+-+    xlen -= i;
+-+  }
+-+}
+-+
+-+static void __attribute__((constructor))
+-+randombytes_init() {
+-+  global_urandom_fd = open("/dev/urandom", O_RDONLY);
+-+  if (global_urandom_fd < 0) {
+-+    perror("opening /dev/urandom");
+-+    abort();
+-+  }
+-+}
+-+
+-+static PyObject *
+-+nacl_verify_16(PyObject *self, PyObject *args) {
+-+  PyStringObject *sa, *sb;
+-+  if (!PyArg_ParseTuple(args, "SS", &sa, &sb)) return NULL;
+-+
+-+  if (PyString_Size((PyObject *) sa) != 16 ||
+-+      PyString_Size((PyObject *) sb) != 16) {
+-+      PyErr_SetString(PyExc_ValueError,
+-+                      "Both arguments to verify16 must be 16 bytes long");
+-+      return NULL;
+-+  }
+-+
+-+  const char *a = PyString_AS_STRING(sa);
+-+  const char *b = PyString_AS_STRING(sb);
+-+
+-+  if (!crypto_verify_16((u8 *) a, (u8 *) b)) {
+-+    Py_RETURN_TRUE;
+-+  } else {
+-+    Py_RETURN_FALSE;
+-+  }
+-+}
+-+
+-+static PyObject *
+-+nacl_verify_32(PyObject *self, PyObject *args) {
+-+  PyStringObject *sa, *sb;
+-+  if (!PyArg_ParseTuple(args, "SS", &sa, &sb)) return NULL;
+-+
+-+  if (PyString_Size((PyObject *) sa) != 32 ||
+-+      PyString_Size((PyObject *) sb) != 32) {
+-+      PyErr_SetString(PyExc_ValueError,
+-+                      "Both arguments to verify32 must be 32 bytes long");
+-+      return NULL;
+-+  }
+-+
+-+  const char *a = PyString_AS_STRING(sa);
+-+  const char *b = PyString_AS_STRING(sb);
+-+
+-+  if (!crypto_verify_32((u8 *) a, (u8 *) b)) {
+-+    Py_RETURN_TRUE;
+-+  } else {
+-+    Py_RETURN_FALSE;
+-+  }
+-+}
+-+
+-+#define function_auth1(x)  // not wrapped yet
+-+
+-+#define function_hash(x) HASHFUNC(_##x)
+-+#define function_auth(x) AUTHFUNC(,_##x)
+-+#define function_onetimeauth(x) AUTHFUNC(onetime,_##x)
+-+#define function_stream(x) STREAMXORFUNC(_##x)
+-+#define function_secretbox(x) SECRETBOXFUNC(_##x)
+-+#define function_smult(x) SMULTFUNC(_##x)
+-+#define function_box(x) BOXFUNC(_##x)
+-+#include "methods.h"
+-+#undef function_box
+-+#undef function_smult
+-+#undef function_secretbox
+-+#undef function_stream
+-+#undef function_onetimeauth
+-+#undef function_auth
+-+#undef function_hash
+-+
+-+// Default implementations
+-+HASHFUNC()
+-+//AUTHFUNC(,)
+-+//AUTHFUNC(onetime,)
+-+STREAMXORFUNC()
+-+
+-+static PyMethodDef NaClMethods[] = {
+-+  {"verify16",  nacl_verify_16, METH_VARARGS, "Verify two 16-byte strings are equal"},
+-+  {"verify32",  nacl_verify_32, METH_VARARGS, "Verify two 32-byte strings are equal"},
+-+#define function_hash(x) \
+-+  {"hash_" #x, nacl_hash_##x, METH_VARARGS, "Hash a string with " #x},
+-+#define function_auth(x) \
+-+  {"auth_" #x, nacl_auth_##x, METH_VARARGS, "Authenticate a string with " #x},
+-+#define function_onetimeauth(x) \
+-+  {"onetimeauth_" #x, nacl_onetimeauth_##x, METH_VARARGS, "Authenticate a string with " #x},
+-+#define function_stream(x) \
+-+  {"stream_" #x "_xor", nacl_stream_##x##_xor, METH_VARARGS, "Encrypt a string with " #x},
+-+#define function_secretbox(x) \
+-+  {"secretbox_" #x, nacl_secretbox_##x, METH_VARARGS, "Protect a string with " #x},
+-+#define function_smult(x) \
+-+  {"smult_" #x, nacl_smult_##x, METH_VARARGS, "Scalar multiplication with " #x}, \
+-+  {"smult_" #x "_base", nacl_smult_##x##_base, METH_VARARGS, "Scalar multiplication with " #x},
+-+#define function_box(x) \
+-+  {"box_" #x, nacl_box_##x, METH_VARARGS, "Build a cryptographic box using " #x}, \
+-+  {"box_" #x "_open", nacl_box_##x##_open, METH_VARARGS, "Open a cryptographic box using " #x}, \
+-+  {"box_" #x "_keypair", nacl_box_##x##_keypair, METH_VARARGS, "Generate a public/private keypair " #x},
+-+#include "methods.h"
+-+#undef function_box
+-+#undef function_smult
+-+#undef function_secretbox
+-+#undef function_stream
+-+#undef function_onetimeauth
+-+#undef function_auth
+-+#undef function_hash
+-+  {"hash", nacl_hash, METH_VARARGS, "Hash a string"},
+-+  //{"auth", nacl_auth, METH_VARARGS, "Authenticate a string"},
+-+  //{"onetimeauth", nacl_onetimeauth, METH_VARARGS, "Authenticate a string"},
+-+  {"stream_xor", nacl_stream_xor, METH_VARARGS, "Encrypt a string"},
+-+
+-+  {NULL, NULL, 0, NULL}
+-+};
+-+
+-+PyMODINIT_FUNC
+-+initnacl(void) {
+-+    (void) Py_InitModule("nacl", NaClMethods);
+-+}
+-Index: nacl-20080914/bindings/python/setup.py
+-===================================================================
+---- /dev/null	1970-01-01 00:00:00.000000000 +0000
+-+++ nacl-20080914/bindings/python/setup.py	2008-09-18 15:33:22.000000000 -0700
+-@@ -0,0 +1,10 @@
+-+from distutils.core import setup, Extension
+-+
+-+naclmod = Extension('nacl',
+-+                    sources = ['nacl.c'],
+-+                    libraries = ['nacl'])
+-+
+-+setup (name = 'NaCl',
+-+       version = '0.1',
+-+       description = 'A wrapping of the NaCl crypto library',
+-+       ext_modules = [naclmod])
+-Index: nacl-20080914/bindings/python/templates.h
+-===================================================================
+---- /dev/null	1970-01-01 00:00:00.000000000 +0000
+-+++ nacl-20080914/bindings/python/templates.h	2008-09-18 16:22:23.000000000 -0700
+-@@ -0,0 +1,337 @@
+-+#ifndef NACL_PY_TEMPLATES_H
+-+#define NACL_PY_TEMPLATES_H
+-+
+-+#define HASHFUNC(x) \
+-+static PyObject * \
+-+nacl_hash##x(PyObject *self, PyObject *args) { \
+-+  PyStringObject *a; \
+-+  u8 digest[crypto_hash##x##_BYTES]; \
+-+\
+-+  if (!PyArg_ParseTuple(args, "S", &a)) return NULL; \
+-+  const unsigned long long a_len = PyString_Size((PyObject *) a); \
+-+  const char *abytes = PyString_AS_STRING((PyObject *) a); \
+-+\
+-+  crypto_hash##x(digest, (const u8 *) abytes, a_len); \
+-+  return PyString_FromStringAndSize((const char *) digest, sizeof(digest)); \
+-+}
+-+
+-+#define AUTHFUNC(type, x) \
+-+static PyObject * \
+-+nacl_##type##auth##x(PyObject *self, PyObject *args) { \
+-+  PyStringObject *a, *key; \
+-+  u8 digest[crypto_##type##auth##x##_BYTES]; \
+-+ \
+-+  if (!PyArg_ParseTuple(args, "SS", &a, &key)) return NULL; \
+-+ \
+-+  if (PyString_Size((PyObject *) key) != crypto_##type##auth##x##_KEYBYTES) { \
+-+      PyErr_Format(PyExc_ValueError, \
+-+                   "Key must be %d bytes long", \
+-+                   crypto_##type##auth##x##_KEYBYTES); \
+-+      return NULL; \
+-+  } \
+-+ \
+-+  const char *keybytes = PyString_AS_STRING((PyObject *) key); \
+-+  const unsigned long long a_len = PyString_Size((PyObject *) a); \
+-+  const char *abytes = PyString_AS_STRING((PyObject *) a); \
+-+ \
+-+  crypto_##type##auth##x(digest, (const u8 *) abytes, a_len, (u8 *) keybytes); \
+-+  return PyString_FromStringAndSize((const char *) digest, sizeof(digest)); \
+-+}
+-+
+-+#define STREAMXORFUNC(x) \
+-+static PyObject * \
+-+nacl_stream##x##_xor(PyObject *self, PyObject *args) { \
+-+  PyStringObject *a, *key, *nonce; \
+-+  u8 *output; \
+-+\
+-+  if (!PyArg_ParseTuple(args, "SSS", &a, &nonce, &key)) return NULL; \
+-+\
+-+  if (PyString_Size((PyObject *) key) != crypto_stream##x##_KEYBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Key must be %d bytes long", \
+-+                 crypto_stream##x##_KEYBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  if (PyString_Size((PyObject *) nonce) != crypto_stream##x##_NONCEBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Nonce must be %d bytes long", \
+-+                 crypto_stream##x##_NONCEBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  const char *k = PyString_AS_STRING(key); \
+-+  const char *n = PyString_AS_STRING(nonce); \
+-+  const unsigned long long a_len = PyString_Size((PyObject *) a); \
+-+  const char *abytes = PyString_AS_STRING((PyObject *) a); \
+-+\
+-+  if (posix_memalign((void **) &output, 16, a_len)) { \
+-+    PyErr_NoMemory(); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  crypto_stream##x##_xor(output, (const u8 *) abytes, a_len, (const u8 *) n, \
+-+                       (const u8 *) k); \
+-+  PyObject *ret = PyString_FromStringAndSize((const char *) output, a_len); \
+-+  free(output); \
+-+  return ret; \
+-+}
+-+
+-+#define SECRETBOXFUNC(x) \
+-+static PyObject * \
+-+nacl_secretbox##x(PyObject *self, PyObject *args) { \
+-+  PyStringObject *a, *key, *nonce; \
+-+  u8 *output, *input; \
+-+\
+-+  if (!PyArg_ParseTuple(args, "SSS", &a, &nonce, &key)) return NULL; \
+-+\
+-+  if (PyString_Size((PyObject *) key) != crypto_secretbox##x##_KEYBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Key must be %d bytes long", \
+-+                 crypto_secretbox##x##_KEYBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  if (PyString_Size((PyObject *) nonce) != crypto_secretbox##x##_NONCEBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Nonce must be %d bytes long", \
+-+                 crypto_secretbox##x##_NONCEBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  const char *k = PyString_AS_STRING(key); \
+-+  const char *n = PyString_AS_STRING(nonce); \
+-+  const unsigned long long a_len = PyString_Size((PyObject *) a); \
+-+  const char *abytes = PyString_AS_STRING((PyObject *) a); \
+-+\
+-+  if (posix_memalign((void **) &output, 16, a_len + \
+-+                                            crypto_secretbox##x##_ZEROBYTES)) { \
+-+    PyErr_NoMemory(); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  if (posix_memalign((void **) &input, 16, a_len + \
+-+                                            crypto_secretbox##x##_ZEROBYTES)) { \
+-+    free(output); \
+-+    PyErr_NoMemory(); \
+-+    return NULL; \
+-+  } \
+-+  memcpy(input + crypto_secretbox##x##_ZEROBYTES, abytes, a_len); \
+-+  memset(input, 0, crypto_secretbox##x##_ZEROBYTES); \
+-+\
+-+  crypto_secretbox##x(output, input, a_len + crypto_secretbox##x##_ZEROBYTES, \
+-+                      (const u8 *) n, (const u8 *) k); \
+-+  free(input); \
+-+  PyObject *ret = \
+-+    PyString_FromStringAndSize((const char *) output + crypto_secretbox##x##_BOXZEROBYTES, \
+-+                               a_len + crypto_secretbox##x##_ZEROBYTES - crypto_secretbox##x##_BOXZEROBYTES); \
+-+  free(output); \
+-+  return ret; \
+-+}
+-+
+-+#define SMULTFUNC(x) \
+-+static PyObject * \
+-+nacl_smult##x(PyObject *self, PyObject *args) { \
+-+  PyStringObject *a, *b; \
+-+ \
+-+  if (!PyArg_ParseTuple(args, "SS", &a, &b)) return NULL; \
+-+ \
+-+  if (PyString_Size((PyObject *) a) != crypto_smult##x##_SCALARBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Scalar value must be %d bytes long", \
+-+                 crypto_smult##x##_SCALARBYTES); \
+-+    return NULL; \
+-+  } \
+-+ \
+-+  if (PyString_Size((PyObject *) b) != crypto_smult##x##_BYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Group element must be %d bytes long", \
+-+                 crypto_smult##x##_BYTES); \
+-+    return NULL; \
+-+  } \
+-+ \
+-+  const char *abytes = PyString_AS_STRING((PyObject *) a); \
+-+  const char *bbytes = PyString_AS_STRING((PyObject *) b); \
+-+  unsigned char result[crypto_smult##x##_BYTES]; \
+-+ \
+-+  crypto_smult##x(result, (const u8 *) abytes, (const u8 *) bbytes); \
+-+  PyObject *ret = PyString_FromStringAndSize((const char *) result, \
+-+                                             crypto_smult##x##_BYTES); \
+-+ \
+-+  return ret; \
+-+} \
+-+\
+-+static PyObject * \
+-+nacl_smult##x##_base(PyObject *self, PyObject *args) { \
+-+  PyStringObject *a; \
+-+ \
+-+  if (!PyArg_ParseTuple(args, "S", &a)) return NULL; \
+-+ \
+-+  if (PyString_Size((PyObject *) a) != crypto_smult##x##_SCALARBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Scalar value must be %d bytes long", \
+-+                 crypto_smult##x##_SCALARBYTES); \
+-+    return NULL; \
+-+  } \
+-+ \
+-+  const char *abytes = PyString_AS_STRING((PyObject *) a); \
+-+  unsigned char result[crypto_smult##x##_BYTES]; \
+-+ \
+-+  crypto_smult##x##_base(result, (const u8 *) abytes); \
+-+  PyObject *ret = PyString_FromStringAndSize((const char *) result, \
+-+                                             crypto_smult##x##_BYTES); \
+-+ \
+-+  return ret; \
+-+}
+-+
+-+#define BOXFUNC(x) \
+-+static PyObject * \
+-+nacl_box##x##_keypair(PyObject *self, PyObject *args) { \
+-+  if (!PyArg_ParseTuple(args, "")) return NULL; \
+-+\
+-+  uint8_t pk[crypto_box##x##_PUBLICKEYBYTES]; \
+-+  uint8_t sk[crypto_box##x##_PUBLICKEYBYTES]; \
+-+\
+-+  crypto_box##x##_keypair(pk, sk); \
+-+\
+-+  PyObject *a = PyString_FromStringAndSize((const char *) pk, sizeof(pk)); \
+-+  if (!a) \
+-+    return NULL; \
+-+  PyObject *b = PyString_FromStringAndSize((const char *) sk, sizeof(sk)); \
+-+  if (!b) { \
+-+    Py_DECREF(a); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  return PyTuple_Pack(2, a, b); \
+-+} \
+-+\
+-+static PyObject * \
+-+nacl_box##x(PyObject *self, PyObject *args) { \
+-+  PyStringObject *m, *nonce, *pk, *sk; \
+-+\
+-+  if (!PyArg_ParseTuple(args, "SSSS", &m, &nonce, &pk, &sk)) return NULL; \
+-+\
+-+  if (PyString_Size((PyObject *) pk) != crypto_box##x##_PUBLICKEYBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Public key value must be %d bytes long", \
+-+                 crypto_box##x##_PUBLICKEYBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  if (PyString_Size((PyObject *) sk) != crypto_box##x##_SECRETKEYBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Secret key value must be %d bytes long", \
+-+                 crypto_box##x##_SECRETKEYBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  if (PyString_Size((PyObject *) nonce) != crypto_box##x##_NONCEBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Nonce value must be %d bytes long", \
+-+                 crypto_box##x##_NONCEBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  const char *pkbytes = PyString_AS_STRING(pk); \
+-+  const char *skbytes = PyString_AS_STRING(sk); \
+-+  const char *noncebytes = PyString_AS_STRING(nonce); \
+-+  const unsigned long long m_len = PyString_Size((PyObject *) m); \
+-+  const char *mbytes = PyString_AS_STRING((PyObject *) m); \
+-+\
+-+  u8 *output, *input; \
+-+\
+-+  if (posix_memalign((void **) &output, 16, \
+-+                     m_len + crypto_box##x##_ZEROBYTES)) { \
+-+    PyErr_NoMemory(); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  if (posix_memalign((void **) &input, 16, \
+-+                     m_len + crypto_box##x##_ZEROBYTES)) { \
+-+    free(output); \
+-+    PyErr_NoMemory(); \
+-+    return NULL; \
+-+  } \
+-+  memcpy(input + crypto_box##x##_ZEROBYTES, mbytes, m_len); \
+-+  memset(input, 0, crypto_box##x##_ZEROBYTES); \
+-+\
+-+  crypto_box##x(output, input, m_len + crypto_box##x##_ZEROBYTES, (uint8_t *) noncebytes, \
+-+                (uint8_t *) pkbytes, (uint8_t *) skbytes); \
+-+  free(input); \
+-+\
+-+  PyObject *ret = \
+-+    PyString_FromStringAndSize((const char *) output + crypto_box##x##_BOXZEROBYTES, \
+-+                               m_len + crypto_box##x##_ZEROBYTES - crypto_box##x##_BOXZEROBYTES); \
+-+  free(output); \
+-+  return ret; \
+-+} \
+-+\
+-+static PyObject * \
+-+nacl_box##x##_open(PyObject *self, PyObject *args) { \
+-+  PyStringObject *m, *nonce, *pk, *sk; \
+-+\
+-+  if (!PyArg_ParseTuple(args, "SSSS", &m, &nonce, &pk, &sk)) return NULL; \
+-+\
+-+  if (PyString_Size((PyObject *) pk) != crypto_box##x##_PUBLICKEYBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Public key value must be %d bytes long", \
+-+                 crypto_box##x##_PUBLICKEYBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  if (PyString_Size((PyObject *) sk) != crypto_box##x##_SECRETKEYBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Secret key value must be %d bytes long", \
+-+                 crypto_box##x##_SECRETKEYBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  if (PyString_Size((PyObject *) nonce) != crypto_box##x##_NONCEBYTES) { \
+-+    PyErr_Format(PyExc_ValueError, \
+-+                 "Nonce value must be %d bytes long", \
+-+                 crypto_box##x##_NONCEBYTES); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  const char *pkbytes = PyString_AS_STRING(pk); \
+-+  const char *skbytes = PyString_AS_STRING(sk); \
+-+  const char *noncebytes = PyString_AS_STRING(nonce); \
+-+  const unsigned long long m_len = PyString_Size((PyObject *) m); \
+-+  const char *mbytes = PyString_AS_STRING((PyObject *) m); \
+-+\
+-+  u8 *output, *input; \
+-+\
+-+  if (posix_memalign((void **) &output, 16, \
+-+                     m_len + crypto_box##x##_BOXZEROBYTES)) { \
+-+    PyErr_NoMemory(); \
+-+    return NULL; \
+-+  } \
+-+\
+-+  if (posix_memalign((void **) &input, 16, \
+-+                     m_len + crypto_box##x##_BOXZEROBYTES)) { \
+-+    free(output); \
+-+    PyErr_NoMemory(); \
+-+    return NULL; \
+-+  } \
+-+  memcpy(input + crypto_box##x##_BOXZEROBYTES, mbytes, m_len); \
+-+  memset(input, 0, crypto_box##x##_BOXZEROBYTES); \
+-+\
+-+  if (crypto_box##x##_open(output, input, m_len + crypto_box##x##_BOXZEROBYTES, \
+-+                           (uint8_t *) noncebytes, \
+-+                           (uint8_t *) pkbytes, (uint8_t *) skbytes) == -1) { \
+-+    free(output); \
+-+    free(input); \
+-+    PyErr_Format(PyExc_ValueError, "Box contents corrupt"); \
+-+    return NULL; \
+-+  }\
+-+  free(input); \
+-+\
+-+  PyObject *ret = \
+-+    PyString_FromStringAndSize((const char *) output + crypto_box##x##_ZEROBYTES, \
+-+                               m_len + crypto_box##x##_BOXZEROBYTES - crypto_box##x##_ZEROBYTES); \
+-+  free(output); \
+-+  return ret; \
+-+}
+-+
+-+#endif  // NACL_PY_TEMPLATES_H
+-Index: nacl-20080914/crypto_auth1/poly1305/amd64/constants.s
+-===================================================================
+---- nacl-20080914.orig/crypto_auth1/poly1305/amd64/constants.s	2008-09-18 15:54:57.000000000 -0700
+-+++ nacl-20080914/crypto_auth1/poly1305/amd64/constants.s	2008-09-18 15:57:47.000000000 -0700
+-@@ -27,6 +27,27 @@
+- .globl crypto_auth1_poly1305_amd64_hoffset3
+- .globl crypto_auth1_poly1305_amd64_rounding
+- 
+-+.hidden _crypto_auth1_poly1305_amd64_constants
+-+.hidden crypto_auth1_poly1305_amd64_constants
+-+.hidden crypto_auth1_poly1305_amd64_scale
+-+.hidden crypto_auth1_poly1305_amd64_two32
+-+.hidden crypto_auth1_poly1305_amd64_two64
+-+.hidden crypto_auth1_poly1305_amd64_two96
+-+.hidden crypto_auth1_poly1305_amd64_alpha32
+-+.hidden crypto_auth1_poly1305_amd64_alpha64
+-+.hidden crypto_auth1_poly1305_amd64_alpha96
+-+.hidden crypto_auth1_poly1305_amd64_alpha130
+-+.hidden crypto_auth1_poly1305_amd64_doffset0
+-+.hidden crypto_auth1_poly1305_amd64_doffset1
+-+.hidden crypto_auth1_poly1305_amd64_doffset2
+-+.hidden crypto_auth1_poly1305_amd64_doffset3
+-+.hidden crypto_auth1_poly1305_amd64_doffset3minustwo128
+-+.hidden crypto_auth1_poly1305_amd64_hoffset0
+-+.hidden crypto_auth1_poly1305_amd64_hoffset1
+-+.hidden crypto_auth1_poly1305_amd64_hoffset2
+-+.hidden crypto_auth1_poly1305_amd64_hoffset3
+-+.hidden crypto_auth1_poly1305_amd64_rounding
+-+
+- _crypto_auth1_poly1305_amd64_constants:
+- crypto_auth1_poly1305_amd64_constants:
+- crypto_auth1_poly1305_amd64_scale:
+-Index: nacl-20080914/crypto_auth1/poly1305/x86/constants.s
+-===================================================================
+---- nacl-20080914.orig/crypto_auth1/poly1305/x86/constants.s	2008-09-18 16:01:51.000000000 -0700
+-+++ nacl-20080914/crypto_auth1/poly1305/x86/constants.s	2008-09-18 16:02:09.000000000 -0700
+-@@ -27,6 +27,27 @@
+- .globl crypto_auth1_poly1305_x86_hoffset3
+- .globl crypto_auth1_poly1305_x86_rounding
+- 
+-+.hidden _crypto_auth1_poly1305_x86_constants
+-+.hidden crypto_auth1_poly1305_x86_constants
+-+.hidden crypto_auth1_poly1305_x86_scale
+-+.hidden crypto_auth1_poly1305_x86_two32
+-+.hidden crypto_auth1_poly1305_x86_two64
+-+.hidden crypto_auth1_poly1305_x86_two96
+-+.hidden crypto_auth1_poly1305_x86_alpha32
+-+.hidden crypto_auth1_poly1305_x86_alpha64
+-+.hidden crypto_auth1_poly1305_x86_alpha96
+-+.hidden crypto_auth1_poly1305_x86_alpha130
+-+.hidden crypto_auth1_poly1305_x86_doffset0
+-+.hidden crypto_auth1_poly1305_x86_doffset1
+-+.hidden crypto_auth1_poly1305_x86_doffset2
+-+.hidden crypto_auth1_poly1305_x86_doffset3
+-+.hidden crypto_auth1_poly1305_x86_doffset3minustwo128
+-+.hidden crypto_auth1_poly1305_x86_hoffset0
+-+.hidden crypto_auth1_poly1305_x86_hoffset1
+-+.hidden crypto_auth1_poly1305_x86_hoffset2
+-+.hidden crypto_auth1_poly1305_x86_hoffset3
+-+.hidden crypto_auth1_poly1305_x86_rounding
+-+
+- _crypto_auth1_poly1305_x86_constants:
+- crypto_auth1_poly1305_x86_constants:
+- crypto_auth1_poly1305_x86_scale:
+diff -Nur mdempsky-dnscurve-fd16d68/attic/README mdempsky-dnscurve/attic/README
+--- mdempsky-dnscurve-fd16d68/attic/README	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/attic/README	1970-01-01 01:00:00.000000000 +0100
+@@ -1,2 +0,0 @@
+-nacl-python.patch adds the Python NaCl bindings to NaCl; however, it's
+-written for an outdated version of NaCl (20080914, not 20090405).
+diff -Nur mdempsky-dnscurve-fd16d68/drafts/draft-dempsky-dnscurve-00.xml mdempsky-dnscurve/drafts/draft-dempsky-dnscurve-00.xml
+--- mdempsky-dnscurve-fd16d68/drafts/draft-dempsky-dnscurve-00.xml	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/drafts/draft-dempsky-dnscurve-00.xml	1970-01-01 01:00:00.000000000 +0100
+@@ -1,459 +0,0 @@
+-<?xml version='1.0'?>
+-<!DOCTYPE rfc SYSTEM 'rfc2629.dtd' [
+- <!ENTITY RFC2119 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
+- <!ENTITY rfc4648 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4648.xml'>
+-]>
+-
+-<?rfc toc='yes'?>
+-<?rfc symrefs='yes'?>
+-<?rfc compact='yes'?>
+-<?rfc subcompact='no'?>
+-
+-<rfc category='std' ipr='trust200902' docName='draft-dempsky-dnscurve-00'>
+-<front>
+-<title abbrev='DNSCurve: Link-level security for DNS'>DNSCurve: Link-level security for the Domain Name System</title>
+-
+-<author initials='M.' surname='Dempsky' fullname='Matthew Dempsky'>
+-<organization>OpenDNS, Inc.</organization>
+-<address>
+-<postal>
+-<street>199 Fremont St, Fl 12</street>
+-<city>San Francisco</city> <region>CA</region> <code>94105-6629</code>
+-<country>US</country>
+-</postal>
+-<phone>+1 415 680 3742</phone>
+-<email>matthew@dempsky.org</email>
+-</address>
+-</author>
+-
+-<date month='August' year='2009' />
+-
+-<abstract>
+-<t>
+-This document describes DNSCurve,
+-a protocol extension that adds link-level security
+-to the Domain Name System (DNS).
+-</t>
+-</abstract>
+-</front>
+-
+-<middle>
+-<section title='Introduction'>
+-<t>
+-DNSCurve adds link-level security to the Domain Name System (DNS). It
+-includes a key distribution mechanism compatible with today's name
+-server software and registry services, and two packet formats: a
+-simple streamlined format requiring minimal packet overhead and a
+-mostly backwards-compatible format intended for use with strict
+-firewalls and DNS proxies.
+-</t>
+-<t>
+-DNSCurve packets include a cryptographic MAC to provide integrity and
+-availability. Clients can be confident that verified responses came
+-from the appropriate server and were not forged by a blind or even
+-sniffing attacker, while servers can be confident that responses will
+-not be replayed against other unintended clients. Additionally,
+-DNSCurve packets are encrypted to provide some confidentiality.
+-</t>
+-<t>
+-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+-"SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+-document are to be interpreted as described in RFC 2119
+-<xref target='RFC2119' />.
+-</t>
+-</section>
+-
+-<section title='Overview'>
+-<t>
+-DNSCurve uses Curve25519XSalsa20Poly1305, a particular combination of
+-the Curve25519, Salsa20, and Poly1305 primitives as described in <xref
+-target='naclcrypto' />. In particular, it is a cryptosystem featuring
+-256-bit public and secret keys, 192-bit nonces, and 128-bit
+-authenticators.
+-</t>
+-<t>
+-Each DNSCurve client and server has a secret key and a corresponding
+-public key. DNSCurve servers distribute their public keys by encoding
+-them in name server names embedded in standard DNS NS records.
+-DNSCurve clients distribute their public keys by including them in
+-their query packets.
+-</t>
+-<t>
+-When a DNSCurve client is about to send a DNS query to a name server,
+-if the name contains a DNSCurve public key, it can instead use this
+-public key along with its own secret key and a nonce to protect its
+-query in a "cryptographic box" as described in <xref
+-target='naclcrypto' />. The client then encodes this cryptographic box
+-along with the nonce and its own public key as an expanded DNSCurve
+-query packet, which it sends to the DNSCurve server.
+-</t>
+-<t>
+-Upon receiving a DNS query packet, a DNSCurve name server first checks
+-if it appears to be an expanded DNSCurve query packet. If not, then it
+-responds normally. Otherwise, it extracts the client's DNSCurve public
+-key, nonce, and boxed query, and attempts to open the box using the
+-public key and nonce and its own secret key. If this fails (i.e., the
+-authenticator is invalid), then the packet is not an expanded DNSCurve
+-query packet, and the server responds as a normal DNS query.
+-</t>
+-<t>
+-Otherwise, if the unboxing succeeds, then the server discovers the
+-client's original query packet. To send a response, the server chooses
+-a nonce extension to append to the client-chosen nonce, and protects
+-its response packet in a cryptographic box using the same keys and the
+-extended nonce. The server then encodes this cryptographic box as an
+-expanded DNSCurve response packet, which it sends to the DNSCurve
+-client.
+-</t>
+-<t>
+-Meanwhile, the DNSCurve client waits for an expanded DNSCurve response
+-packet. If it receives a non-DNSCurve response packet, an expanded
+-DNSCurve response packet with an invalid nonce (i.e., not an extension
+-of its original nonce) or an invalid cryptographic box (i.e., cannot
+-be opened using the same keys and the extended nonce), then it discards
+-the packet and continues waiting. Once it receives a valid expanded
+-DNSCurve response packet, it opens the cryptographic box to discover
+-the server's original DNS response.
+-</t>
+-</section>
+-
+-<section title='Base-32 encoding'>
+-<t>
+-Sometimes DNSCurve communicates arbitrary byte strings inside domain
+-names. While the DNS protocol is 8-bit safe for names and labels
+-(except for case-insensitive handling of ASCII alphabetic characters),
+-many tools have trouble with arbitrary characters in domain names, in
+-particular domain registrar software. To cope with this limitation,
+-DNSCurve encodes byte strings using a set of safe alphanumeric
+-characters.
+-</t>
+-<t>
+-In DNSCurve's base-32 encoding, a byte string is interpreted as a
+-number in little-endian form. Each 5-bit sequence of this number, from
+-least significant to most significant, is encoded as one of the
+-standard "digits" "0123456789bcdfghjklmnpqrstuvwxyz". A final sequence
+-of fewer than 5 bits is zero-extended before encoding. Decoders MUST
+-accept "BCDFGHJKLMNPQRSTUVWXYZ" as synonyms for
+-"bcdfghjklmnpqrstuvwxyz".
+-</t>
+-<t>
+-For example, the two-byte string with bytes {0x64,0x88} (i.e., {100,136}
+-decimal) is interpreted as the integer 0x8864 (i.e., 34916). The bits
+-1000100001100100 of this integer are divided into 5-bit parts 00100,
+-00011, 00010, 00001, which in turn are encoded as "4", "3", "2", "1".
+-The original string is therefore encoded as the string "4321".
+-</t>
+-<t>
+-N.B., this is not the same encoding as defined in <xref
+-target='RFC4648' />.  In particular, the byte string is chunked into
+-5-bit sequences differently, and a different alphabet is used.  The
+-first allows DNSCurve public keys to be encoded slightly more
+-compactly (see <xref target='pubkeys' />), and the second helps to
+-further prevent false positives when searching for base-32 encoded
+-strings in domain names.
+-</t>
+-
+-<section title='Examples'>
+-
+-<texttable>
+-<ttcol>Byte string</ttcol>
+-<ttcol>Base-32 encoding</ttcol>
+-
+-<c>{}</c>
+-<c>""</c>
+-
+-<c>{0x88}</c>
+-<c>"84"</c>
+-
+-
+-<c>{0x9f,0x0b}</c>
+-<c>"zw20"</c>
+-
+-
+-<c>{0x17,0xa3,0xd4}</c>
+-<c>"rs89f"</c>
+-
+-
+-<c>{0x2a,0xa9,0x13,0x7e}</c>
+-<c>"b9b71z1"</c>
+-
+-
+-<c>{0x7e,0x69,0xa3,0xef,0xac}</c>
+-<c>"ycu6urmp"</c>
+-
+-
+-<c>{0xe5,0x3b,0x60,0xe8,0x15,0x62}</c>
+-<c>"5zg06nr223"</c>
+-
+-<c>{0x72,0x3c,0xef,0x3a,0x43,0x2c,0x8f}</c>
+-<c>"l3hygxd8dt31"</c>
+-
+-
+-<c>{0x17,0xf7,0x35,0x09,0x41,0xe4,0xdc,0x01}</c>
+-<c>"rsxcm44847r30"</c>
+-
+-</texttable>
+-
+-</section>
+-</section>
+-
+-<section anchor='pubkeys' title='Encoding public keys in name server names'>
+-<t>
+-DNSCurve public keys are encoded in name server names as a 54-byte
+-label consisting of the magic string "uz5" followed by the first 51
+-bytes of the base-32 encoding of the public key. (Curve25519 public
+-keys are actually 255-bit integers in little-endian, so the 52nd byte
+-of the base-32 encoding will always be "0".)
+-</t>
+-<t>
+-When a DNSCurve client is searching a name server name for a DNSCurve
+-public key, it MUST check every label for an encoded public key. If
+-multiple public keys are found, the left-most label MUST be chosen.
+-String comparison with "uz5" MUST be performed case-insensitively.
+-</t>
+-
+-<!--
+-Bother with this, or just provide reference code?
+-
+-<section title='Examples'>
+-
+-<t>
+-A few examples of domain names 
+-and their respective DNSCurve public keys:
+-<list style='symbols'>
+-<t>ns1.example.com: none</t>
+-<t>uz5foo.example.com: none</t>
+-<t>uz5vowels
+-<t>uz5[bcd...].example.com: decode([bcd...])</t>
+-<t>x.uz5[mnp...].example.com: decode([mnp...])</t>
+-<t>uz5[fgh...].uz5[jkl...].example.com: decode([fgh...])</t>
+-<t>uz5.uz5[mnp...].example.com: decode([mnp...])</t>
+-<t>uz5[aaa...].uz5[qrs...].example.com: decode([qrs...])</t>
+-</list>
+-</t>
+-
+-</section>
+--->
+-
+-</section>
+-
+-<section title='Nonce generation'>
+-<t>
+-For every request, DNSCurve clients generate a 96-bit nonce, and for
+-every response, DNSCurve servers generate a 96-bit nonce extension.
+-Nonces MUST be unique for distinct packets for the same client-server
+-key pair. A simple way to achieve this is to choose a unique nonce
+-for each packet and for each retransmission. Additionally, servers
+-MUST use a non-zero nonce extension (because nonces are zero extended
+-in query packets). Clients and servers may otherwise generate nonces
+-however they choose.
+-</t>
+-<t>
+-Two recommended ways to generate a 96-bit nonce or nonce extension are
+-<list style='numbers'>
+-<t>a 64-bit counter (starting at 1) followed by a 32-bit random number
+-and</t>
+-<t>a 64-bit timestamp (e.g., nanoseconds since 1970) followed by a
+-32-bit random number.</t>
+-</list>
+-In either case the 64-bit value MUST NOT decrease even if the software
+-restarts or the system clock jumps backwards.
+-</t>
+-<t>
+-If multiple clients or multiple servers share a DNSCurve secret key,
+-then they MUST make sure no two separate clients or servers generate
+-the same nonce. A simple way to achieve this is to use nonce
+-separation; e.g., one server uses only even nonces and the other uses
+-only odd nonces.
+-</t>
+-</section>
+-
+-<section title='DNSCurve expanded formats'>
+-<t>
+-DNSCurve defines two expanded formats: "streamlined" and "TXT". Each
+-includes a format for expanded queries and a format for expanded
+-responses. DNSCurve clients may send DNSCurve expanded queries using
+-whichever format it chooses, but they are encouraged to use the
+-streamlined format when possible. A DNSCurve server MUST support
+-DNSCurve expanded queries in either format and MUST send expanded
+-responses using the corresponding format.
+-</t>
+-
+-<section title='Streamlined format'>
+-<t>
+-An expanded query packet in streamlined format has the following bytes:
+-<list style='symbols'>
+-<t>8 bytes: the magic string "Q6fnvWj8".</t>
+-<t>32 bytes: the client's DNSCurve public key.</t>
+-<t>12 bytes: a client-selected nonce for this packet.</t>
+-<t>A cryptographic box containing the original DNS query packet.</t>
+-</list>
+-</t>
+-<t>
+-An expanded response packet in streamlined format has the following bytes:
+-<list style='symbols'>
+-<t>8 bytes: the magic string "R6fnvWJ8".</t>
+-<t>12 bytes: the client's nonce.</t>
+-<t>12 bytes: a server-selected nonce extension.</t>
+-<t>A cryptographic box containing the original DNS response packet.</t>
+-</list>
+-</t>
+-<t>
+-Note that this streamlined response format does not repeat the
+-client's query name, and in particular does not repeat the client's
+-public key. However, it does repeat the client's nonce.
+-</t>
+-</section>
+-
+-<section title='TXT format'>
+-<t>
+-The "TXT" format receives its name from the fact that expanded query
+-and response packets in this format appear to casual inspection to be
+-standard DNS packets with two possible exceptions: 1) the query name
+-exceed 255 bytes and 2) the total packet may exceed 512 bytes.
+-</t>
+-<t>
+-When encoding an expanded query packet in TXT format, a DNSCurve
+-client MUST create a DNS standard query packet with the AA, TC, RD,
+-RA, Z, and RCODE bits cleared, a single entry in the question section,
+-and no records in the answer, authority records, or additional records
+-sections. The one question MUST be an Internet class question for TXT
+-records for the query name constructed from the concatenation of the
+-following labels:
+-<list style='symbols'>
+-<t>
+-One or more labels, each label before the last being exactly 50 bytes,
+-the last label being at most 50 bytes. The concatenation of these
+-labels is the base-32 encoding of a 96-bit client-selected nonce for
+-this packet followed by a cryptographic box containing the original
+-DNS query packet.
+-</t>
+-<t>
+-One 54-byte label: the client's DNSCurve public key, encoded as
+-described in <xref target='pubkeys' />, except with the magic string
+-"x1a" instead of "uz5".
+-</t>
+-<t>
+-Zero or more additional labels specifying the name of the zone served
+-by this server; i.e., the owner name of the relevant NS record.
+-</t>
+-</list>
+-</t>
+-<t>
+-A DNSCurve server SHOULD be lenient in decoding expanded query packets
+-in TXT format. In particular, it MUST allow the RD bit to either be
+-set or clear, MUST allow records in the answer, authority records, and
+-additional records sections, and MUST allow any labels to follow the
+-DNSCurve public key in the query name. However, it MUST discard
+-packets with the QR bit set.
+-</t>
+-<t>
+-When encoding an expanded response packet in TXT format, a DNSCurve
+-server MUST create a DNS standard response packet copying the ID, RD
+-bit, and questions section from the expanded query packet, setting the
+-AA bit, leaving the TC and RA bits cleared and Z and RCODE values set
+-to 0, containing one record in the answer section, and no records in
+-the authority records or additional records section. The record in the
+-answer section MUST be an Internet-class TXT record for the query name
+-from the questions section with a TTL of 0. The RDATA of this record
+-is the 96-bit server-selected nonce extension followed by a
+-cryptographic box containing the original DNS response packet, encoded
+-as a sequence of one or more strings of at most 255 bytes in standard
+-DNS TXT RDATA format.
+-</t>
+-<t>
+-Similarly, a DNSCurve client SHOULD be lenient in decoding expanded
+-response packets in TXT format. In particular, it MUST allow the
+-server to alter the case of the query name when repeating it in the
+-questions section.
+-</t>
+-</section>
+-
+-</section> <!-- formats -->
+-
+-<section title='UDP and TCP'>
+-<t>
+-If a normal DNS response packet is larger than 512 bytes then the
+-server replaces it by an explicitly truncated packet. The client then
+-tries again through TCP. Servers are not required to support TCP if no
+-responses are above 512 bytes; clients are permitted to try TCP only
+-if the server has explicitly indicated truncation.
+-</t>
+-<t>
+-DNSCurve does not require TCP support from servers that were not
+-already supporting TCP. If the original DNS response packet is at most
+-512 bytes then the server is permitted to send the expanded response
+-packet as a UDP packet. DNSCurve clients are required to set aside a
+-4096-byte buffer for receiving a UDP response packet.
+-</t>
+-<t>
+-If the original DNS response packet is above 512 bytes then it is
+-replaced by an explicitly truncated packet and the truncated packet is
+-protected by DNSCurve. In this case the client tries again by TCP,
+-sending its DNSCurve query packet through TCP and receiving the
+-DNSCurve response through TCP.
+-</t>
+-<t>
+-TCP is considerably more expensive for clients and servers than UDP
+-is, and TCP has no protection against denial of service, so server
+-administrators are advised to stay below 512 bytes if possible.
+-DNSCurve adds some denial-of-service protection for UDP but cannot do
+-anything to help TCP.
+-</t>
+-<t>
+-If a protected DNS query includes an EDNS0 OPT record, then the payload
+-size field refers to how large the original DNS response packet can be
+-before encoding as a DNSCurve response packet.
+-Clients MUST reduce the payload size they advertise to account for overhead
+-from encoding the response as an expanded response packet.
+-If a server builds a response within the payload size limit,
+-but cannot fit the encoded response in 4096 bytes,
+-then it MAY silently discard the response.
+-</t>
+-</section>
+-
+-<section title='Security considerations'>
+-<t>
+-The security of the Curve25519XSalsa20Poly1305 cryptosystem and its
+-underlying cryptographic primitives is discussed in <xref
+-target='naclcrypto' />.  In summary, it is designed to meet the
+-standard notions of privacy and third-party unforgeability for a
+-public-key authenticated-encryption scheme using nonces.
+-</t>
+-<t>
+-DNSCurve only provides link-level security between a client-server
+-pair.  It does not attempt to ensure end-to-end security for queries
+-and responses relayed by untrusted DNS proxies and caches.
+-</t>
+-</section>
+-
+-<section title='IANA considerations'>
+-<t>
+-This document has no actions for IANA.
+-</t>
+-</section>
+-
+-</middle>
+-
+-<back>
+-
+-<references title='Normative references'>
+-&RFC2119;
+-&rfc4648;
+-
+-<reference anchor='naclcrypto'>
+-<front>
+-  <title>Cryptography in NaCl</title>
+-  <author initials='D. J.' surname='Bernstein' fullname='Daniel J. Bernstein'>
+-    <organization abbrev='UIC'>
+-      University of Illinois at Chicago
+-    </organization>
+-  </author>
+-  <date month='March' year='2009' />
+-</front>
+-<format type='html' target='http://cr.yp.to/papers.html#naclcrypto' />
+-</reference>
+-</references>
+-
+-</back>
+-</rfc>
+diff -Nur mdempsky-dnscurve-fd16d68/drafts/draft-dempsky-dnscurve-01.xml mdempsky-dnscurve/drafts/draft-dempsky-dnscurve-01.xml
+--- mdempsky-dnscurve-fd16d68/drafts/draft-dempsky-dnscurve-01.xml	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/drafts/draft-dempsky-dnscurve-01.xml	1970-01-01 01:00:00.000000000 +0100
+@@ -1,505 +0,0 @@
+-<?xml version='1.0'?>
+-<!DOCTYPE rfc SYSTEM 'rfc2629.dtd' [
+- <!ENTITY RFC2119 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
+- <!ENTITY rfc4648 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4648.xml'>
+-]>
+-
+-<?rfc toc='yes'?>
+-<?rfc symrefs='yes'?>
+-<?rfc compact='yes'?>
+-<?rfc subcompact='no'?>
+-
+-<rfc category='std' ipr='trust200902' docName='draft-dempsky-dnscurve-01'>
+-<front>
+-<title abbrev='DNSCurve: Link-Level Security for DNS'>DNSCurve: Link-Level Security for the Domain Name System</title>
+-
+-<author initials='M.' surname='Dempsky' fullname='Matthew Dempsky'>
+-<organization>OpenDNS, Inc.</organization>
+-<address>
+-<postal>
+-<street>410 Townsend St, Suite 250</street>
+-<city>San Francisco</city> <region>CA</region> <code>94107</code>
+-<country>US</country>
+-</postal>
+-<phone>+1 415 680 3742</phone>
+-<email>matthew@dempsky.org</email>
+-</address>
+-</author>
+-
+-<date month='February' year='2010' />
+-
+-<abstract>
+-<t>
+-This document describes DNSCurve,
+-a protocol extension that adds link-level security
+-to the Domain Name System (DNS).
+-</t>
+-</abstract>
+-</front>
+-
+-<middle>
+-<section title='Introduction'>
+-<t>
+-DNSCurve adds link-level security to the Domain Name System (DNS). It
+-includes a key distribution mechanism compatible with today's name
+-server software and registry services, and two packet formats: a
+-simple streamlined format requiring minimal space and processing
+-overhead and a mostly backwards-compatible format intended for use
+-with strict firewalls and DNS proxies.
+-</t>
+-<t>
+-DNSCurve packets include a cryptographic MAC (aka authenticator) to
+-provide integrity and availability. Clients can be confident that
+-verified responses came from the appropriate server and were not
+-forged by a blind or even sniffing attacker, while servers can be
+-confident that responses will not be replayed against other unintended
+-clients. Additionally, DNSCurve packets are encrypted to provide some
+-confidentiality.
+-</t>
+-
+-<section title='Terminology'>
+-<t>
+-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+-"SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+-document are to be interpreted as described in RFC 2119
+-<xref target='RFC2119' />.
+-</t>
+-<!--
+-Define "cryptographic box", "authenticator", "public key", "secret
+-key", etc?
+--->
+-</section>
+-</section>
+-
+-<section title='Overview'>
+-<t>
+-DNSCurve uses Curve25519XSalsa20Poly1305, a particular combination of
+-the Curve25519, Salsa20, and Poly1305 primitives as described in <xref
+-target='naclcrypto' />. In particular, it is a cryptosystem featuring
+-256-bit public and secret keys, 192-bit nonces, and 128-bit
+-authenticators.
+-</t>
+-<t>
+-Each DNSCurve client and server has a secret key and a corresponding
+-public key. DNSCurve servers distribute their public keys by encoding
+-them in name server names embedded in standard DNS NS records (as
+-described in <xref target="pubkeys"/>), while DNSCurve clients
+-distribute their public keys by including them in their query packets.
+-(Additional mechanisms for key distribution like DNSSEC's trust
+-anchors and DLV are possible, but not defined by this document.)
+-</t>
+-<t>
+-When a DNSCurve client is about to send a DNS query to a name server,
+-if the client knows a DNSCurve public key for that name server, it MAY
+-instead use that public key along with its own DNSCurve secret key and
+-a nonce to protect its query in a "cryptographic box" as described in
+-<xref target='naclcrypto' />. The client then encodes this
+-cryptographic box along with the nonce and its own public key as an
+-expanded DNSCurve query packet, which it sends to the DNSCurve server
+-instead of the original DNS query.
+-</t>
+-<t>
+-Upon receiving a DNS query packet, a DNSCurve name server should first
+-treat the packet as a DNSCurve query packet by extracting the client's
+-DNSCurve public key, nonce, and boxed query and trying to open the box
+-using the extracted public key and its own secret key. However, if
+-this fails (i.e., the packet is not formatted as an expanded DNSCurve
+-query packet or the box's authenticator is invalid), then the server
+-responds to the packet as a normal DNS packet.
+-</t>
+-<t>
+-Assuming the unboxing succeeds, then the server discovers the client's
+-original query packet. To send a response, the server chooses a nonce
+-extension to append to the client-chosen nonce, and protects its
+-response packet in a cryptographic box using the extend nonce and same
+-keys used to unbox the client's DNS query. The server then encodes
+-this cryptographic box as an expanded DNSCurve response packet, which
+-it sends to the DNSCurve client instead of the original DNS response.
+-</t>
+-<t>
+-Meanwhile, the DNSCurve client waits for an expanded DNSCurve response
+-packet. If it receives a non-DNSCurve response packet, an expanded
+-DNSCurve response packet with an invalid nonce (i.e., not an extension
+-of its original nonce) or an invalid cryptographic box (i.e., cannot
+-be opened using the same keys and the extended nonce), then it discards
+-the packet and continues waiting. Once it receives a valid expanded
+-DNSCurve response packet, it opens the cryptographic box to discover
+-the server's original DNS response.
+-</t>
+-</section>
+-
+-<section title='Base-32 Encoding'>
+-<t>
+-Sometimes DNSCurve communicates arbitrary byte strings inside domain
+-names. While the DNS protocol is 8-bit safe for names and labels
+-(except for case-insensitive handling of ASCII alphabetic characters),
+-many tools have trouble with arbitrary characters in domain names, in
+-particular domain registrar software. To cope with this limitation,
+-DNSCurve encodes byte strings using a set of safe alphanumeric
+-characters.
+-</t>
+-<t>
+-In DNSCurve's base-32 encoding, a byte string is interpreted as a
+-number in little-endian form. Each 5-bit sequence of this number, from
+-least significant to most significant, is encoded as one of the
+-standard "digits" "0123456789bcdfghjklmnpqrstuvwxyz". A final sequence
+-of fewer than 5 bits is zero-extended before encoding. Decoders MUST
+-accept "BCDFGHJKLMNPQRSTUVWXYZ" as synonyms for
+-"bcdfghjklmnpqrstuvwxyz".
+-</t>
+-<t>
+-For example, the two-byte string with bytes {0x64,0x88} (i.e., {100,136}
+-decimal) is interpreted as the integer 0x8864 (i.e., 34916). The bits
+-1000100001100100 of this integer are divided into 5-bit parts 00100,
+-00011, 00010, 00001, which in turn are encoded as "4", "3", "2", "1".
+-The original string is therefore encoded as the string "4321".
+-</t>
+-<t>
+-N.B., this is not the same encoding as defined in <xref
+-target='RFC4648' />.  In particular, the byte string is chunked into
+-5-bit sequences differently, and a different alphabet is used.  The
+-first allows DNSCurve public keys to be encoded slightly more
+-compactly (see <xref target='pubkeys' />), and the second helps to
+-further prevent false positives when searching for base-32 encoded
+-strings in domain names.
+-</t>
+-
+-<section title='Examples'>
+-
+-<texttable>
+-<ttcol>Byte string</ttcol>
+-<ttcol>Base-32 encoding</ttcol>
+-
+-<c>{}</c>
+-<c>""</c>
+-
+-<c>{0x88}</c>
+-<c>"84"</c>
+-
+-
+-<c>{0x9f,0x0b}</c>
+-<c>"zw20"</c>
+-
+-
+-<c>{0x17,0xa3,0xd4}</c>
+-<c>"rs89f"</c>
+-
+-
+-<c>{0x2a,0xa9,0x13,0x7e}</c>
+-<c>"b9b71z1"</c>
+-
+-
+-<c>{0x7e,0x69,0xa3,0xef,0xac}</c>
+-<c>"ycu6urmp"</c>
+-
+-
+-<c>{0xe5,0x3b,0x60,0xe8,0x15,0x62}</c>
+-<c>"5zg06nr223"</c>
+-
+-<c>{0x72,0x3c,0xef,0x3a,0x43,0x2c,0x8f}</c>
+-<c>"l3hygxd8dt31"</c>
+-
+-
+-<c>{0x17,0xf7,0x35,0x09,0x41,0xe4,0xdc,0x01}</c>
+-<c>"rsxcm44847r30"</c>
+-
+-</texttable>
+-
+-</section>
+-</section>
+-
+-<section anchor='pubkeys' title='Encoding Public Keys in Name Server Names'>
+-<t>
+-DNSCurve public keys are encoded in name server names as a 54-byte
+-label consisting of the magic string "uz5" followed by the first 51
+-bytes of the base-32 encoding of the public key. (Curve25519 public
+-keys are actually 255-bit integers in little-endian, so the 52nd byte
+-of the base-32 encoding will always be "0".)
+-</t>
+-<t>
+-When a DNSCurve client is searching a name server name for a DNSCurve
+-public key, it MUST check every label for an encoded public key. If
+-multiple public keys are found, the left-most label MUST be chosen.
+-String comparison with "uz5" MUST be performed case-insensitively.
+-</t>
+-
+-<!--
+-Bother with this, or just provide reference code?
+-
+-<section title='Examples'>
+-
+-<t>
+-A few examples of domain names 
+-and their respective DNSCurve public keys:
+-<list style='symbols'>
+-<t>ns1.example.com: none</t>
+-<t>uz5foo.example.com: none</t>
+-<t>uz5vowels
+-<t>uz5[bcd...].example.com: decode([bcd...])</t>
+-<t>x.uz5[mnp...].example.com: decode([mnp...])</t>
+-<t>uz5[fgh...].uz5[jkl...].example.com: decode([fgh...])</t>
+-<t>uz5.uz5[mnp...].example.com: decode([mnp...])</t>
+-<t>uz5[aaa...].uz5[qrs...].example.com: decode([qrs...])</t>
+-</list>
+-</t>
+-
+-</section>
+--->
+-
+-</section>
+-
+-<section title='Nonce Generation'>
+-<t>
+-For every request, DNSCurve clients generate a 96-bit nonce, and for
+-every response, DNSCurve servers generate a 96-bit nonce extension.
+-Nonces MUST be unique for distinct packets for the same client-server
+-key pair. A simple way to achieve this is to choose a unique nonce for
+-each packet and for each retransmission. Additionally, servers MUST
+-use a non-zero nonce extension (because nonces are zero extended in
+-query packets). However, subject to these constraints, clients and
+-servers may generate nonces however they choose.
+-</t>
+-<t>
+-Two recommended ways to generate a 96-bit nonce or nonce extension are
+-<list style='numbers'>
+-<t>a 64-bit counter (starting at 1) followed by a 32-bit random number
+-and</t>
+-<t>a 64-bit timestamp (e.g., nanoseconds since 1970) followed by a
+-32-bit random number.</t>
+-</list>
+-In either case the 64-bit value MUST NOT decrease even if the software
+-restarts or the system clock jumps backwards.
+-</t>
+-<t>
+-If multiple clients or multiple servers share a DNSCurve secret key,
+-then they MUST make sure no two separate clients or servers generate
+-the same nonce. A simple way to achieve this is to use nonce
+-separation; e.g., if two servers share a DNSCurve key pair, one server
+-could use only even nonces and the other could use only odd nonces.
+-</t>
+-</section>
+-
+-<section title='DNSCurve Expanded Formats'>
+-<t>
+-DNSCurve defines two expanded formats: "streamlined" and "TXT". Each
+-includes a format for expanded queries and a format for expanded
+-responses. DNSCurve clients may send DNSCurve expanded queries using
+-whichever format it chooses, but they are encouraged to use the
+-streamlined format when possible. A DNSCurve server MUST support
+-DNSCurve expanded queries in either format and MUST send expanded
+-responses using the corresponding format.
+-</t>
+-
+-<section title='Streamlined Format'>
+-<t>
+-An expanded query packet in streamlined format has the following bytes:
+-<list style='symbols'>
+-<t>8 bytes: the magic string "Q6fnvWj8".</t>
+-<t>32 bytes: the client's DNSCurve public key.</t>
+-<t>12 bytes: a client-selected nonce for this packet.</t>
+-<t>A cryptographic box containing the original DNS query packet.</t>
+-</list>
+-</t>
+-<t>
+-An expanded response packet in streamlined format has the following bytes:
+-<list style='symbols'>
+-<t>8 bytes: the magic string "R6fnvWJ8".</t>
+-<t>12 bytes: the client's nonce.</t>
+-<t>12 bytes: a server-selected nonce extension.</t>
+-<t>A cryptographic box containing the original DNS response packet.</t>
+-</list>
+-</t>
+-<t>
+-Note that this streamlined response format does not repeat the
+-client's query name, and in particular does not repeat the client's
+-public key. However, it does repeat the client's nonce.
+-</t>
+-</section>
+-
+-<section title='TXT Format'>
+-<t>
+-The "TXT" format receives its name from the fact that expanded query
+-and response packets in this format appear to casual inspection to be
+-standard DNS packets with two possible exceptions: 1) the query name
+-may exceed 255 bytes and 2) the total packet may exceed 512 bytes.
+-</t>
+-<t>
+-When encoding an expanded query packet in TXT format, a DNSCurve
+-client MUST create a DNS standard query packet with the AA, TC, RD,
+-RA, Z, and RCODE bits cleared, a single entry in the question section,
+-and no records in the answer, authority, or additional records
+-sections. The one question MUST ask for Internet-class TXT records for
+-the query name constructed from the concatenation of the following
+-labels:
+-<list style='symbols'>
+-<t>
+-One or more labels, each label except the last being exactly 50 bytes,
+-with the last label being at most 50 bytes. The concatenation of these
+-labels is the base-32 encoding of a 96-bit client-selected nonce for
+-this packet followed by a cryptographic box containing the original
+-DNS query packet.
+-</t>
+-<t>
+-One 54-byte label: the client's DNSCurve public key, encoded as
+-described in <xref target='pubkeys' />, except with the magic string
+-"x1a" instead of "uz5".
+-</t>
+-<t>
+-Zero or more additional labels specifying the name of the zone served
+-by this server; i.e., the owner name of the relevant NS record.
+-</t>
+-</list>
+-</t>
+-<t>
+-A DNSCurve server SHOULD be lenient in decoding expanded query packets
+-in TXT format. In particular, it MUST allow the RD bit to either be
+-set or clear, MUST allow records in the answer, authority records, and
+-additional records sections, and MUST allow any labels to follow the
+-DNSCurve public key in the query name. However, it MUST discard
+-packets with the QR bit set.
+-</t>
+-<t>
+-When encoding an expanded response packet in TXT format, a DNSCurve
+-server MUST create a DNS standard response packet copying the ID, RD
+-bit, and questions section from the expanded query packet, setting the
+-AA bit, leaving the TC and RA bits cleared and Z and RCODE values set
+-to 0, containing one record in the answer section, and no records in
+-the authority records or additional records section. The record in the
+-answer section MUST be an Internet-class TXT record for the query name
+-from the questions section with a TTL of 0. The RDATA of this record
+-is the 96-bit server-selected nonce extension followed by a
+-cryptographic box containing the original DNS response packet, encoded
+-as a sequence of one or more strings of at most 255 bytes in standard
+-DNS TXT RDATA format.
+-</t>
+-<t>
+-Similarly, a DNSCurve client SHOULD be lenient in decoding expanded
+-response packets in TXT format. In particular, it MUST allow the
+-server to alter the case of the query name when repeating it in the
+-questions section.
+-</t>
+-</section>
+-
+-</section> <!-- formats -->
+-
+-<section title='UDP and TCP'>
+-<t>
+-If a normal DNS response packet is larger than 512 bytes then the
+-server replaces it by an explicitly truncated packet. The client then
+-tries again through TCP. Servers are not required to support TCP if no
+-responses are above 512 bytes; clients are permitted to try TCP only
+-if the server has explicitly indicated truncation.
+-</t>
+-<t>
+-DNSCurve does not require TCP support from servers that were not
+-already supporting TCP. If the original DNS response packet is at most
+-512 bytes then the server is permitted to send the expanded response
+-packet as a UDP packet. DNSCurve clients are required to set aside a
+-4096-byte buffer for receiving a UDP response packet.
+-</t>
+-<t>
+-If the original DNS response packet is larger than 512 bytes then it
+-is replaced by an explicitly truncated packet and the truncated packet
+-is protected by DNSCurve. In this case the client tries again by TCP,
+-sending its DNSCurve query packet through TCP and receiving the
+-DNSCurve response through TCP.
+-</t>
+-<t>
+-TCP is considerably more expensive for clients and servers than UDP
+-is, and TCP has no protection against denial of service, so server
+-administrators are advised to stay below 512 bytes if possible.
+-DNSCurve adds some denial-of-service protection for UDP but cannot do
+-anything to help TCP.
+-</t>
+-<t>
+-If a protected DNS query includes an EDNS0 OPT record, then the payload
+-size field refers to how large the original DNS response packet can be
+-before encoding as a DNSCurve response packet.
+-Clients MUST reduce the payload size they advertise to account for overhead
+-from encoding the response as an expanded response packet.
+-If a server builds a response within the payload size limit,
+-but then cannot fit the encoded response in 4096 bytes,
+-it MAY silently discard the response.
+-</t>
+-<t>
+-Even when DNSCurve transactions take place over UDP, they may still be
+-vulnerable to denial-of-service attacks due to spoofed IP fragments if
+-response packets are large enough to require IP fragmentation.
+-Therefore, servers SHOULD try to keep response packets within the
+-path's MTU limits.
+-</t>
+-</section>
+-
+-<section title='Security Considerations'>
+-<t>
+-The security of the Curve25519XSalsa20Poly1305 cryptosystem and its
+-underlying cryptographic primitives is discussed in <xref
+-target='naclcrypto' />.  In summary, it is designed to meet the
+-standard notions of privacy and third-party unforgeability for a
+-public-key authenticated-encryption scheme using nonces.
+-</t>
+-<t>
+-DNSCurve only provides link-level security between a client-server
+-pair.  It does not attempt to ensure end-to-end security for queries
+-and responses relayed by untrusted DNS proxies and caches.
+-</t>
+-<t>
+-DNSCurve clients are free to choose whether or not to use DNSCurve on
+-a per query basis; e.g., a client may decide to fallback to standard
+-DNS after a few failed DNSCurve queries.  Of course, DNSCurve cannot
+-make any security guarantees for transactions that do not use
+-DNSCurve, so clients are encouraged to use DNSCurve if possible.
+-</t>
+-<t>
+-DNSCurve adds some confidentiality by encrypting DNS packet contents
+-but does not attempt to hide the length of the original DNS packet nor
+-the source or destination of the packet.  Additionally, the TXT format
+-requires clients to reveal the zone they are querying.
+-</t>
+-</section>
+-
+-<section title='IANA Considerations'>
+-<t>
+-This document has no actions for IANA.
+-</t>
+-</section>
+-
+-<section title='Acknowledgements'>
+-<t>
+-The DNSCurve protocol was first introduced by Dan Berstein. Thanks
+-also to Adam Langley and George Barwood for their contributions to
+-early DNSCurve implementations.
+-</t>
+-<t>
+-Much thanks for feedback regarding this draft from George Barwood,
+-Sjoerd Langkemper and Nikos Mavrogiannopoulos.
+-</t>
+-</section>
+-
+-</middle>
+-
+-<back>
+-
+-<references title='Normative References'>
+-&RFC2119;
+-
+-<reference anchor='naclcrypto'>
+-<front>
+-  <title>Cryptography in NaCl</title>
+-  <author initials='D. J.' surname='Bernstein' fullname='Daniel J. Bernstein'>
+-    <organization abbrev='UIC'>
+-      University of Illinois at Chicago
+-    </organization>
+-  </author>
+-  <date month='March' year='2009' />
+-</front>
+-<format type='html' target='http://cr.yp.to/papers.html#naclcrypto' />
+-</reference>
+-</references>
+-
+-<references title='Informative References'>
+-&rfc4648;
+-</references>
+-
+-</back>
+-</rfc>
+diff -Nur mdempsky-dnscurve-fd16d68/drafts/draft-dempsky-dnscurve.xml mdempsky-dnscurve/drafts/draft-dempsky-dnscurve.xml
+--- mdempsky-dnscurve-fd16d68/drafts/draft-dempsky-dnscurve.xml	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/drafts/draft-dempsky-dnscurve.xml	1970-01-01 01:00:00.000000000 +0100
+@@ -1,508 +0,0 @@
+-<?xml version='1.0'?>
+-<!DOCTYPE rfc SYSTEM 'rfc2629.dtd' [
+- <!ENTITY RFC2119 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
+- <!ENTITY rfc4648 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4648.xml'>
+-]>
+-
+-<?rfc toc='yes'?>
+-<?rfc symrefs='yes'?>
+-<?rfc compact='yes'?>
+-<?rfc subcompact='no'?>
+-
+-<rfc category='std' ipr='trust200902' docName='draft-dempsky-dnscurve-01'>
+-<front>
+-<title abbrev='DNSCurve: Link-Level Security for DNS'>DNSCurve: Link-Level Security for the Domain Name System</title>
+-
+-<author initials='M.' surname='Dempsky' fullname='Matthew Dempsky'>
+-<organization>OpenDNS, Inc.</organization>
+-<address>
+-<postal>
+-<street>410 Townsend St, Suite 250</street>
+-<city>San Francisco</city> <region>CA</region> <code>94107</code>
+-<country>US</country>
+-</postal>
+-<phone>+1 415 680 3742</phone>
+-<email>matthew@dempsky.org</email>
+-</address>
+-</author>
+-
+-<date month='February' year='2010' />
+-
+-<abstract>
+-<t>
+-This document describes DNSCurve,
+-a protocol extension that adds link-level security
+-to the Domain Name System (DNS).
+-</t>
+-</abstract>
+-</front>
+-
+-<middle>
+-<section title='Introduction'>
+-<t>
+-DNSCurve adds link-level security to the Domain Name System (DNS). It
+-includes a key distribution mechanism compatible with today's name
+-server software and registry services, and two packet formats: a
+-simple streamlined format requiring minimal space and processing
+-overhead and a mostly backwards-compatible format intended for use
+-with strict firewalls and DNS proxies.
+-</t>
+-<t>
+-DNSCurve packets include a cryptographic MAC (aka authenticator) to
+-provide integrity and availability. Clients can be confident that
+-verified responses came from the appropriate server and were not
+-forged by a blind or even sniffing attacker, while servers can be
+-confident that responses will not be replayed against other unintended
+-clients. Additionally, DNSCurve packets are encrypted to provide some
+-confidentiality.
+-</t>
+-
+-<section title='Terminology'>
+-<t>
+-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+-"SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+-document are to be interpreted as described in RFC 2119
+-<xref target='RFC2119' />.
+-</t>
+-<!--
+-Define "cryptographic box", "authenticator", "public key", "secret
+-key", etc?
+--->
+-</section>
+-</section>
+-
+-<section title='Overview'>
+-<t>
+-DNSCurve uses Curve25519XSalsa20Poly1305, a particular combination of
+-the Curve25519, Salsa20, and Poly1305 primitives as described in <xref
+-target='naclcrypto' />. In particular, it is a cryptosystem featuring
+-256-bit public and secret keys, 192-bit nonces, and 128-bit
+-authenticators.
+-</t>
+-<t>
+-Each DNSCurve client and server has a secret key and a corresponding
+-public key. DNSCurve servers distribute their public keys by encoding
+-them in name server names embedded in standard DNS NS records (as
+-described in <xref target="pubkeys"/>), while DNSCurve clients
+-distribute their public keys by including them in their query packets.
+-(Additional mechanisms for key distribution like DNSSEC's trust
+-anchors and DLV are possible, but not defined by this document.)
+-</t>
+-<t>
+-When a DNSCurve client is about to send a DNS query to a name server,
+-if the client knows a DNSCurve public key for that name server, it MAY
+-instead use that public key along with its own DNSCurve secret key and
+-a nonce to protect its query in a "cryptographic box" as described in
+-<xref target='naclcrypto' />. The client then encodes this
+-cryptographic box along with the nonce and its own public key as an
+-expanded DNSCurve query packet, which it sends to the DNSCurve server
+-instead of the original DNS query.
+-</t>
+-<t>
+-Upon receiving a DNS query packet, a DNSCurve name server should first
+-treat the packet as a DNSCurve query packet by extracting the client's
+-DNSCurve public key, nonce, and boxed query and trying to open the box
+-using the extracted public key and its own secret key. However, if
+-this fails (i.e., the packet is not formatted as an expanded DNSCurve
+-query packet or the box's authenticator is invalid), then the server
+-responds to the packet as a normal DNS packet.
+-</t>
+-<t>
+-Assuming the unboxing succeeds, then the server discovers the client's
+-original query packet. To send a response, the server chooses a nonce
+-extension to append to the client-chosen nonce, and protects its
+-response packet in a cryptographic box using the extend nonce and same
+-keys used to unbox the client's DNS query. The server then encodes
+-this cryptographic box as an expanded DNSCurve response packet, which
+-it sends to the DNSCurve client instead of the original DNS response.
+-</t>
+-<t>
+-Meanwhile, the DNSCurve client waits for an expanded DNSCurve response
+-packet. If it receives a non-DNSCurve response packet, an expanded
+-DNSCurve response packet with an invalid nonce (i.e., not an extension
+-of its original nonce) or an invalid cryptographic box (i.e., cannot
+-be opened using the same keys and the extended nonce), then it discards
+-the packet and continues waiting. Once it receives a valid expanded
+-DNSCurve response packet, it opens the cryptographic box to discover
+-the server's original DNS response.
+-</t>
+-</section>
+-
+-<section title='Base-32 Encoding'>
+-<t>
+-Sometimes DNSCurve communicates arbitrary byte strings inside domain
+-names. While the DNS protocol is 8-bit safe for names and labels
+-(except for case-insensitive handling of ASCII alphabetic characters),
+-many tools have trouble with arbitrary characters in domain names, in
+-particular domain registrar software. To cope with this limitation,
+-DNSCurve encodes byte strings using a set of safe alphanumeric
+-characters.
+-</t>
+-<t>
+-In DNSCurve's base-32 encoding, a byte string is interpreted as a
+-number in little-endian form. Each 5-bit sequence of this number, from
+-least significant to most significant, is encoded as one of the
+-standard "digits" "0123456789bcdfghjklmnpqrstuvwxyz". A final sequence
+-of fewer than 5 bits is zero-extended before encoding. Decoders MUST
+-accept "BCDFGHJKLMNPQRSTUVWXYZ" as synonyms for
+-"bcdfghjklmnpqrstuvwxyz".
+-</t>
+-<t>
+-For example, the two-byte string with bytes {0x64,0x88} (i.e., {100,136}
+-decimal) is interpreted as the integer 0x8864 (i.e., 34916). The bits
+-1000100001100100 of this integer are divided into 5-bit parts 00100,
+-00011, 00010, 00001, which in turn are encoded as "4", "3", "2", "1".
+-The original string is therefore encoded as the string "4321".
+-</t>
+-<t>
+-N.B., this is not the same encoding as defined in <xref
+-target='RFC4648' />.  In particular, the byte string is chunked into
+-5-bit sequences differently, and a different alphabet is used.  The
+-first allows DNSCurve public keys to be encoded slightly more
+-compactly (see <xref target='pubkeys' />), and the second helps to
+-further prevent false positives when searching for base-32 encoded
+-strings in domain names.
+-</t>
+-
+-<section title='Examples'>
+-
+-<texttable>
+-<ttcol>Byte string</ttcol>
+-<ttcol>Base-32 encoding</ttcol>
+-
+-<c>{}</c>
+-<c>""</c>
+-
+-<c>{0x88}</c>
+-<c>"84"</c>
+-
+-
+-<c>{0x9f,0x0b}</c>
+-<c>"zw20"</c>
+-
+-
+-<c>{0x17,0xa3,0xd4}</c>
+-<c>"rs89f"</c>
+-
+-
+-<c>{0x2a,0xa9,0x13,0x7e}</c>
+-<c>"b9b71z1"</c>
+-
+-
+-<c>{0x7e,0x69,0xa3,0xef,0xac}</c>
+-<c>"ycu6urmp"</c>
+-
+-
+-<c>{0xe5,0x3b,0x60,0xe8,0x15,0x62}</c>
+-<c>"5zg06nr223"</c>
+-
+-<c>{0x72,0x3c,0xef,0x3a,0x43,0x2c,0x8f}</c>
+-<c>"l3hygxd8dt31"</c>
+-
+-
+-<c>{0x17,0xf7,0x35,0x09,0x41,0xe4,0xdc,0x01}</c>
+-<c>"rsxcm44847r30"</c>
+-
+-</texttable>
+-
+-</section>
+-</section>
+-
+-<section anchor='pubkeys' title='Encoding Public Keys in Name Server Names'>
+-<t>
+-DNSCurve public keys are encoded in name server names as a 54-byte
+-label consisting of the magic string "uz5" followed by the first 51
+-bytes of the base-32 encoding of the public key. (Curve25519 public
+-keys are actually 255-bit integers in little-endian, so the 52nd byte
+-of the base-32 encoding will always be "0".)
+-</t>
+-<t>
+-When a DNSCurve client is searching a name server name for a DNSCurve
+-public key, it MUST check every label for an encoded public key. If
+-multiple public keys are found, the left-most label MUST be chosen.
+-String comparison with "uz5" MUST be performed case-insensitively.
+-</t>
+-
+-<!--
+-Bother with this, or just provide reference code?
+-
+-<section title='Examples'>
+-
+-<t>
+-A few examples of domain names 
+-and their respective DNSCurve public keys:
+-<list style='symbols'>
+-<t>ns1.example.com: none</t>
+-<t>uz5foo.example.com: none</t>
+-<t>uz5vowels
+-<t>uz5[bcd...].example.com: decode([bcd...])</t>
+-<t>x.uz5[mnp...].example.com: decode([mnp...])</t>
+-<t>uz5[fgh...].uz5[jkl...].example.com: decode([fgh...])</t>
+-<t>uz5.uz5[mnp...].example.com: decode([mnp...])</t>
+-<t>uz5[aaa...].uz5[qrs...].example.com: decode([qrs...])</t>
+-</list>
+-</t>
+-
+-</section>
+--->
+-
+-</section>
+-
+-<section title='Nonce Generation'>
+-<t>
+-For every request, DNSCurve clients generate a 96-bit nonce, and for
+-every response, DNSCurve servers generate a 96-bit nonce extension.
+-Nonces MUST be unique for distinct packets for the same client-server
+-key pair. A simple way to achieve this is to choose a unique nonce for
+-each packet and for each retransmission. Additionally, servers MUST
+-use a non-zero nonce extension (because nonces are zero extended in
+-query packets). However, subject to these constraints, clients and
+-servers may generate nonces however they choose.
+-</t>
+-<t>
+-Two recommended ways to generate a 96-bit nonce or nonce extension are
+-<list style='numbers'>
+-<t>a 64-bit counter (starting at 1) followed by a 32-bit random number
+-and</t>
+-<t>a 64-bit timestamp (e.g., nanoseconds since 1970) followed by a
+-32-bit random number.</t>
+-</list>
+-In either case the 64-bit value MUST NOT decrease even if the software
+-restarts or the system clock jumps backwards.
+-</t>
+-<t>
+-If multiple clients or multiple servers share a DNSCurve secret key,
+-then they MUST make sure no two separate clients or servers generate
+-the same nonce. A simple way to achieve this is to use nonce
+-separation; e.g., if two servers share a DNSCurve key pair, one server
+-could use only even nonces and the other could use only odd nonces.
+-</t>
+-</section>
+-
+-<section title='DNSCurve Expanded Formats'>
+-<t>
+-DNSCurve defines two expanded formats: "streamlined" and "TXT". Each
+-includes a format for expanded queries and a format for expanded
+-responses. DNSCurve clients may send DNSCurve expanded queries using
+-whichever format it chooses, but they are encouraged to use the
+-streamlined format when possible. A DNSCurve server MUST support
+-DNSCurve expanded queries in either format and MUST send expanded
+-responses using the corresponding format.
+-</t>
+-
+-<section title='Streamlined Format'>
+-<t>
+-An expanded query packet in streamlined format has the following bytes:
+-<list style='symbols'>
+-<t>8 bytes: the magic string "Q6fnvWj8".</t>
+-<t>32 bytes: the client's DNSCurve public key.</t>
+-<t>12 bytes: a client-selected nonce for this packet.</t>
+-<t>A cryptographic box containing the original DNS query packet.</t>
+-</list>
+-</t>
+-<t>
+-An expanded response packet in streamlined format has the following bytes:
+-<list style='symbols'>
+-<t>8 bytes: the magic string "R6fnvWJ8".</t>
+-<t>12 bytes: the client's nonce.</t>
+-<t>12 bytes: a server-selected nonce extension.</t>
+-<t>A cryptographic box containing the original DNS response packet.</t>
+-</list>
+-</t>
+-<t>
+-Note that this streamlined response format does not repeat the
+-client's query name, and in particular does not repeat the client's
+-public key. However, it does repeat the client's nonce.
+-</t>
+-</section>
+-
+-<section title='TXT Format'>
+-<t>
+-The "TXT" format receives its name from the fact that expanded query
+-and response packets in this format appear to casual inspection to be
+-standard DNS packets with two possible exceptions: 1) the query name
+-may exceed 255 bytes and 2) the total packet may exceed 512 bytes.
+-</t>
+-<t>
+-When encoding an expanded query packet in TXT format, a DNSCurve
+-client MUST create a DNS standard query packet with the AA, TC, RD,
+-RA, Z, and RCODE bits cleared, a single entry in the question section,
+-and no records in the answer, authority, or additional records
+-sections. The one question MUST ask for Internet-class TXT records for
+-the query name constructed from the concatenation of the following
+-labels:
+-<list style='symbols'>
+-<t>
+-One or more labels, each label except the last being exactly 50 bytes,
+-with the last label being at most 50 bytes. The concatenation of these
+-labels is the base-32 encoding of a 96-bit client-selected nonce for
+-this packet followed by a cryptographic box containing the original
+-DNS query packet.
+-</t>
+-<t>
+-One 54-byte label: the client's DNSCurve public key, encoded as
+-described in <xref target='pubkeys' />, except with the magic string
+-"x1a" instead of "uz5".
+-</t>
+-<t>
+-Zero or more additional labels specifying the name of the zone served
+-by this server; i.e., the owner name of the relevant NS record.
+-</t>
+-</list>
+-</t>
+-<t>
+-A DNSCurve server SHOULD be lenient in decoding expanded query packets
+-in TXT format. In particular, it MUST allow the RD bit to either be
+-set or clear, MUST allow records in the answer, authority records, and
+-additional records sections, and MUST allow any labels to follow the
+-DNSCurve public key in the query name. However, it MUST discard
+-packets with the QR bit set.
+-</t>
+-<t>
+-When encoding an expanded response packet in TXT format, a DNSCurve
+-server MUST create a DNS standard response packet copying the ID, RD
+-bit, and questions section from the expanded query packet, setting the
+-AA bit, leaving the TC and RA bits cleared and Z and RCODE values set
+-to 0, containing one record in the answer section, and no records in
+-the authority records or additional records section. The record in the
+-answer section MUST be an Internet-class TXT record for the query name
+-from the questions section with a TTL of 0. The RDATA of this record
+-is the 96-bit server-selected nonce extension followed by a
+-cryptographic box containing the original DNS response packet, encoded
+-as a sequence of one or more strings of at most 255 bytes in standard
+-DNS TXT RDATA format.
+-</t>
+-<t>
+-Similarly, a DNSCurve client SHOULD be lenient in decoding expanded
+-response packets in TXT format. In particular, it MUST allow the
+-server to alter the case of the query name when repeating it in the
+-questions section.
+-</t>
+-</section>
+-
+-</section> <!-- formats -->
+-
+-<section title='UDP and TCP'>
+-<t>
+-If a normal DNS response packet is larger than 512 bytes then the
+-server replaces it by an explicitly truncated packet. The client then
+-tries again through TCP. Servers are not required to support TCP if no
+-responses are above 512 bytes; clients are permitted to try TCP only
+-if the server has explicitly indicated truncation.
+-</t>
+-<t>
+-DNSCurve does not require TCP support from servers that were not
+-already supporting TCP. If the original DNS response packet is at most
+-512 bytes then the server is permitted to send the expanded response
+-packet as a UDP packet. DNSCurve clients are required to set aside a
+-4096-byte buffer for receiving a UDP response packet.
+-</t>
+-<t>
+-If the original DNS response packet is larger than 512 bytes then it
+-is replaced by an explicitly truncated packet and the truncated packet
+-is protected by DNSCurve. In this case the client tries again by TCP,
+-sending its DNSCurve query packet through TCP and receiving the
+-DNSCurve response through TCP.
+-</t>
+-<t>
+-TCP is considerably more expensive for clients and servers than UDP
+-is, and TCP has no protection against denial of service, so server
+-administrators are advised to stay below 512 bytes if possible.
+-DNSCurve adds some denial-of-service protection for UDP but cannot do
+-anything to help TCP.
+-</t>
+-<t>
+-If a protected DNS query includes an EDNS0 OPT record, then the payload
+-size field refers to how large the original DNS response packet can be
+-before encoding as a DNSCurve response packet.
+-Clients MUST reduce the payload size they advertise to account for overhead
+-from encoding the response as an expanded response packet.
+-If a server builds a response within the payload size limit,
+-but then cannot fit the encoded response in 4096 bytes,
+-it MAY silently discard the response.
+-</t>
+-<t>
+-Even when DNSCurve transactions take place over UDP, they may still be
+-vulnerable to denial-of-service attacks due to spoofed IP fragments if
+-response packets are large enough to require IP fragmentation.
+-Therefore, servers SHOULD try to keep response packets within the
+-path's MTU limits.
+-</t>
+-</section>
+-
+-<section title='Security Considerations'>
+-<t>
+-The security of the Curve25519XSalsa20Poly1305 cryptosystem and its
+-underlying cryptographic primitives is discussed in <xref
+-target='naclcrypto' />.  In summary, it is designed to meet the
+-standard notions of privacy and third-party unforgeability for a
+-public-key authenticated-encryption scheme using nonces.
+-</t>
+-<t>
+-DNSCurve only provides link-level security between a client-server
+-pair.  It does not attempt to ensure end-to-end security for queries
+-and responses relayed by untrusted DNS proxies and caches.
+-</t>
+-<t>
+-DNSCurve clients are free to choose whether or not to use DNSCurve on
+-a per query basis; e.g., a client may decide to fallback to standard
+-DNS after a few failed DNSCurve queries.  Of course, DNSCurve cannot
+-make any security guarantees for transactions that do not use
+-DNSCurve, so clients are encouraged to use DNSCurve if possible.
+-</t>
+-<t>
+-DNSCurve adds some confidentiality by encrypting DNS packet contents
+-but does not attempt to hide the length of the original DNS packet nor
+-the source or destination of the packet.  Additionally, the TXT format
+-requires clients to reveal the zone they are querying.
+-</t>
+-</section>
+-
+-<section title='IANA Considerations'>
+-<t>
+-This document has no actions for IANA.
+-</t>
+-</section>
+-
+-<section title='Acknowledgements'>
+-<t>
+-The DNSCurve protocol was first introduced by Dan Bernstein. Thanks
+-also to Adam Langley and George Barwood for their contributions to
+-early DNSCurve implementations.
+-</t>
+-<t>
+-Much thanks for feedback regarding this draft from
+-George Barwood,
+-Sjoerd Langkemper,
+-Nikos Mavrogiannopoulos,
+-and Leo Vandewoestijne.
+-</t>
+-</section>
+-
+-</middle>
+-
+-<back>
+-
+-<references title='Normative References'>
+-&RFC2119;
+-
+-<reference anchor='naclcrypto'>
+-<front>
+-  <title>Cryptography in NaCl</title>
+-  <author initials='D. J.' surname='Bernstein' fullname='Daniel J. Bernstein'>
+-    <organization abbrev='UIC'>
+-      University of Illinois at Chicago
+-    </organization>
+-  </author>
+-  <date month='March' year='2009' />
+-</front>
+-<format type='html' target='http://cr.yp.to/papers.html#naclcrypto' />
+-</reference>
+-</references>
+-
+-<references title='Informative References'>
+-&rfc4648;
+-</references>
+-
+-</back>
+-</rfc>
+diff -Nur mdempsky-dnscurve-fd16d68/forward/base32.c mdempsky-dnscurve/forward/base32.c
+--- mdempsky-dnscurve-fd16d68/forward/base32.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/base32.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,93 +0,0 @@
+-#include <stdint.h>
+-#include <errno.h>
+-
+-static const uint8_t kValues[] =
+-  {99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,
+-    99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,0,1,
+-    2,3,4,5,6,7,8,9,99,99,99,99,99,99,99,99,10,11,12,99,13,14,15,99,16,17,18,
+-    19,20,99,21,22,23,24,25,26,27,28,29,30,31,99,99,99,99,99,99,99,10,11,12,99,
+-    13,14,15,99,16,17,18,19,20,99,21,22,23,24,25,26,27,28,29,30,31,99,99,99,99,99};
+-
+-int
+-base32_decode(uint8_t *output, unsigned *ooutlen,
+-              const uint8_t *in, unsigned inlen, int mode) {
+-  unsigned i = 0, j = 0;
+-  unsigned v = 0, bits = 0;
+-  const unsigned outlen = *ooutlen;
+-
+-  while (j < inlen) {
+-    if (in[j] & 0x80)
+-      goto PROTO;
+-    const uint8_t b = kValues[in[j++]];
+-    if (b > 31)
+-      goto PROTO;
+-
+-    v |= ((unsigned) b) << bits;
+-    bits += 5;
+-
+-    if (bits >= 8) {
+-      if (i >= outlen)
+-        goto TOOBIG;
+-      output[i++] = v;
+-      bits -= 8;
+-      v >>= 8;
+-    }
+-  }
+-
+-  if (mode) {
+-    if (bits) {
+-      if (i >= outlen)
+-        goto TOOBIG;
+-      output[i++] = v;
+-    }
+-  } else if (bits >= 5 || v)
+-    goto PROTO;
+-
+-  *ooutlen = i;
+-  return 1;
+-
+- TOOBIG:
+-  errno = E2BIG;
+-  return 0;
+-
+- PROTO:
+-  errno = EPROTO;
+-  return 0;
+-}
+-
+-int
+-base32_encode(uint8_t *output, unsigned *ooutlen, const uint8_t *in, unsigned inlen) {
+-  unsigned i = 0, j = 0;
+-  unsigned v = 0, bits = 0;
+-  const unsigned outlen = *ooutlen;
+-  static const char kChars[] = "0123456789bcdfghjklmnpqrstuvwxyz";
+-
+-  while (j < inlen) {
+-    v |= ((unsigned) in[j++]) << bits;
+-    bits += 8;
+-
+-    while (bits >= 5) {
+-      if (i >= outlen)
+-        goto TOOBIG;
+-      output[i++] = kChars[v & 31];
+-      bits -= 5;
+-      v >>= 5;
+-    }
+-  }
+-
+-  if (bits) {
+-    if (i >= outlen)
+-      goto TOOBIG;
+-    output[i++] = kChars[v & 31];
+-    bits -= 5;
+-    v >>= 5;
+-  }
+-
+-  *ooutlen = i;
+-
+-  return 1;
+-
+- TOOBIG:
+-  errno = E2BIG;
+-  return 0;
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/forward/base32.h mdempsky-dnscurve/forward/base32.h
+--- mdempsky-dnscurve-fd16d68/forward/base32.h	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/base32.h	1970-01-01 01:00:00.000000000 +0100
+@@ -1,11 +0,0 @@
+-#ifndef BASE_32_H
+-#define BASE_32_H
+-
+-#include <stdint.h>
+-
+-int base32_decode(uint8_t *output, unsigned *ooutlen,
+-                  const uint8_t *in, unsigned inlen, int mode);
+-int base32_encode(uint8_t *output, unsigned *ooutlen,
+-                  const uint8_t *in, unsigned inlen);
+-
+-#endif  // BASE_32_H
+diff -Nur mdempsky-dnscurve-fd16d68/forward/base32-test.c mdempsky-dnscurve/forward/base32-test.c
+--- mdempsky-dnscurve-fd16d68/forward/base32-test.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/base32-test.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,33 +0,0 @@
+-#include <stdio.h>
+-#include <stdint.h>
+-#include <string.h>
+-#include <unistd.h>
+-
+-#include "base32.h"
+-
+-int
+-main(int argc, char **argv) {
+-  uint8_t a[128];
+-  unsigned alen = sizeof(a);
+-
+-  if (!base32_encode(a, &alen, (unsigned char *) argv[1], strlen(argv[1]))) {
+-    perror("encode");
+-    return 1;
+-  }
+-
+-  write(1, a, alen);
+-  write(1, "\n", 1);
+-
+-  uint8_t b[128];
+-  unsigned blen = sizeof(b);
+-
+-  if (!base32_decode(b, &blen, a, alen, 0)) {
+-    perror("decode");
+-    return 1;
+-  }
+-
+-  write(1, b, blen);
+-  write(1, "\n", 1);
+-
+-  return 0;
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/forward/dnscurve-keygen.c mdempsky-dnscurve/forward/dnscurve-keygen.c
+--- mdempsky-dnscurve-fd16d68/forward/dnscurve-keygen.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/dnscurve-keygen.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,65 +0,0 @@
+-// -----------------------------------------------------------------------------
+-// dnscurve-keygen: generate a DNS curve key pair
+-//
+-// % keycurve-keygen
+-// Public key: uz5q7op4l1olejadl91gchal06lfeee9acst0rn9qee3manv4494hs
+-// Private key: 50fc1266a832ca39c9c6b220b957f7692b6dc38d946726185e164414293d0444
+-// -----------------------------------------------------------------------------
+-
+-#include <stdint.h>
+-#include <stdio.h>
+-#include <stdlib.h>
+-#include <string.h>
+-
+-#include <fcntl.h>
+-
+-#include "crypto_box_curve25519xsalsa20poly1305.h"
+-
+-#include "base32.h"
+-
+-// An open descriptor to /dev/urandom
+-int global_urandom_fd = -1;
+-
+-int
+-main() {
+-  global_urandom_fd = open("/dev/urandom", O_RDONLY);
+-  if (global_urandom_fd < 0) {
+-    perror("Opening /dev/urandom");
+-    return 1;
+-  }
+-
+-  uint8_t public[32], private[32];
+-  crypto_box_curve25519xsalsa20poly1305_keypair(public, private);
+-
+-  uint8_t dnspublic[64];
+-  unsigned dnspublic_len = sizeof(dnspublic) - 3;
+-
+-  memcpy(dnspublic, "uz5", 3);
+-  if (!base32_encode(dnspublic + 3, &dnspublic_len, public, 32)) {
+-    perror("base32_encode");
+-    return 1;
+-  }
+-  dnspublic[54] = 0;
+-  printf("DNS public key: %s\n", dnspublic);
+-
+-  static const char hextable[] = "0123456789abcdef";
+-  unsigned i;
+-
+-  char hexpublic[65];
+-  for (i = 0; i < 32; ++i) {
+-    hexpublic[i*2    ] = hextable[public[i] >> 4];
+-    hexpublic[i*2 + 1] = hextable[public[i] & 15];
+-  }
+-  hexpublic[64] = 0;
+-  printf("Hex public key: %s\n", hexpublic);
+-
+-  char hexprivate[65];
+-  for (i = 0; i < 32; ++i) {
+-    hexprivate[i*2    ] = hextable[private[i] >> 4];
+-    hexprivate[i*2 + 1] = hextable[private[i] & 15];
+-  }
+-  hexprivate[64] = 0;
+-  printf("Hex secret key: %s\n", hexprivate);
+-
+-  return 0;
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/forward/dnscurve-test-client.c mdempsky-dnscurve/forward/dnscurve-test-client.c
+--- mdempsky-dnscurve-fd16d68/forward/dnscurve-test-client.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/dnscurve-test-client.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,117 +0,0 @@
+-#include <stdio.h>
+-#include <stdint.h>
+-#include <string.h>
+-#include <stdlib.h>
+-
+-#include <unistd.h>
+-#include <errno.h>
+-#include <fcntl.h>
+-#include <sys/socket.h>
+-#include <netinet/in.h>
+-#include <arpa/inet.h>
+-
+-#include "crypto_box_curve25519xsalsa20poly1305.h"
+-#include "randombytes.h"
+-
+-#include "ip_parse.h"
+-#include "dns.h"
+-#include "base32.h"
+-
+-static int
+-usage(const char *argv0) {
+-  fprintf(stderr, "Usage: %s <target ip> <target port> <target public key>\n", argv0);
+-  return 1;
+-}
+-
+-int global_urandom_fd;
+-uint8_t global_secret_key[32];
+-
+-int
+-main(int argc, char **argv) {
+-  global_urandom_fd = open("/dev/urandom", O_RDONLY);
+-  if (global_urandom_fd < 0) {
+-    perror("Opening /dev/urandom");
+-    return 1;
+-  }
+-
+-  if (argc != 4)
+-    return usage(argv[0]);
+-
+-  uint32_t target_ip;
+-
+-  if (!ip_parse(&target_ip, argv[1]))
+-    return usage(argv[0]);
+-
+-  const unsigned portnum = strtoul(argv[2], NULL, 10);
+-
+-  uint8_t server_pk[32];
+-  unsigned server_pk_len = sizeof(server_pk);
+-  if (!base32_decode(server_pk, &server_pk_len, (const uint8_t *) argv[3], strlen(argv[3]), 1)) {
+-    perror("base32_decode");
+-    return 1;
+-  }
+-  if (server_pk_len != 32) {
+-    fprintf(stderr, "Invalid server public key\n");
+-    return 1;
+-  }
+-
+-  static const uint8_t query[] =
+-    "\xab\xcd\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03www\x06google\x03org\x00\x00\x02\x00\x01";
+-
+-  uint8_t pk[32];
+-  crypto_box_curve25519xsalsa20poly1305_keypair(pk, global_secret_key);
+-
+-  uint8_t nonce[24];
+-  uint8_t nonce_and_box[4096];
+-
+-  randombytes(nonce, 12);
+-  memset(nonce + 12, 0, 12);
+-
+-  memset(nonce_and_box, 0, 32);
+-  memcpy(nonce_and_box + 32, query, sizeof(query) - 1);
+-
+-  crypto_box_curve25519xsalsa20poly1305
+-    (nonce_and_box, nonce_and_box, 32 + sizeof(query) - 1, nonce,
+-     server_pk, global_secret_key);
+-
+-  memcpy(nonce_and_box + 4, nonce, 12);
+-
+-  write(1, pk, 32);
+-  write(1, nonce_and_box + 4, 12 + 16 + sizeof(query) - 1);
+-
+-  uint8_t request[4096];
+-  unsigned requestlen = sizeof(request) - 2;
+-
+-  if (!dns_curve_request_build(request + 2, &requestlen,
+-                               nonce_and_box + 4, 12 + 16 + sizeof(query) - 1,
+-                               pk, (unsigned char *) "\x06google\x03org\x00")) {
+-    perror("dns_curve_request_build");
+-    return 1;
+-  }
+-
+-  requestlen += 2;
+-
+-  const int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+-  if (fd < 0) {
+-    perror("socket");
+-    return 1;
+-  }
+-
+-  struct sockaddr_in sin;
+-  memset(&sin, 0, sizeof(sin));
+-  sin.sin_family = AF_INET;
+-  sin.sin_addr.s_addr = target_ip;
+-  sin.sin_port = htons(portnum);
+-
+-  ssize_t n;
+-  do {
+-    n = sendto(fd, request, requestlen, 0, (struct sockaddr *) &sin, sizeof(sin));
+-  } while (n == -1 && errno == EINTR);
+-
+-  if (n < 0) {
+-    perror("sendto");
+-    return 1;
+-  }
+-
+-  return 0;
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/forward/dns.h mdempsky-dnscurve/forward/dns.h
+--- mdempsky-dnscurve-fd16d68/forward/dns.h	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/dns.h	1970-01-01 01:00:00.000000000 +0100
+@@ -1,66 +0,0 @@
+-#ifndef DNS_H
+-#define DNS_H
+-
+-// -----------------------------------------------------------------------------
+-// Read a DNS name from a packet, decoding jumps etc
+-//
+-// name: (output) the resulting name, in DNS length-prefixed, NUL terminated
+-//   format, but without jumps
+-// namemax: length of @name
+-// buf: DNS packet
+-// len: length of @buf
+-// pos: starting position to read the name from
+-// returns: 0 on error or the position following the name.
+-//
+-// Errno:
+-//   EPROTO: invalid packet
+-// -----------------------------------------------------------------------------
+-unsigned dns_packet_getname(uint8_t *name, unsigned namemax,
+-                            const uint8_t *buf, unsigned len, unsigned pos);
+-
+-// -----------------------------------------------------------------------------
+-// Try to parse and decode a dnscurve query name
+-//
+-// box: (output) the 8-byte nonce and box (in binary form)
+-// boxlen: (in/out) number of bytes in @box on entry. Number of valid bytes on
+-//   successful exit
+-// publickey: (output) 32-byte array which receives the public key
+-// zone: (output) the offset into @name where the server's zone starts
+-// name: (input) a DNS name, without jumps and trusted to be valid
+-// returns: 1 on success, 0 otherwise
+-//
+-// Errno:
+-//   EPROTO: Invalid packet
+-//   E2BIG: one of the base32 values was too large
+-//   ENAMETOOLONG: too many box components found
+-// -----------------------------------------------------------------------------
+-int dns_curve_name_parse(uint8_t *box, unsigned *boxlen,
+-                         uint8_t *publickey, unsigned *zone,
+-                         const uint8_t *name);
+-
+-// -----------------------------------------------------------------------------
+-// Try to parse a packet as a DNS curve request
+-//
+-// plaintext: (output) a 4096 byte buffer which receives the enclosed packet
+-// plaintextlen: (output) on success, the length of the data in @plaintext
+-// public_key: (output) the client's public key (32-bytes)
+-// nonce: (output) the client's nonce (8-bytes)
+-// qname: (output) set to point within @buffer to the start of the query name
+-// qnamelen: (output) set to contain the number of bytes of query name
+-// buffer: the packet contents
+-// n: number of bytes in @buffer
+-// returns: 1 on success, 0 if this doesn't appear to be a DNS curve packet and
+-//   -1 if the DNS curve packet is invalid
+-// -----------------------------------------------------------------------------
+-int dns_curve_request_parse(uint8_t *plaintext, unsigned *plaintextlen,
+-                            uint8_t *public_key, uint8_t *nonce,
+-                            const uint8_t **qname, unsigned *qnamelen,
+-                            const uint8_t *buffer, unsigned n);
+-
+-
+-int dns_curve_request_build(uint8_t *output, unsigned *ooutlen,
+-                            const uint8_t *box, unsigned boxlen,
+-                            const uint8_t *public_key,
+-                            const uint8_t *zone);
+-
+-#endif  // DNS_H
+diff -Nur mdempsky-dnscurve-fd16d68/forward/dns_packet.c mdempsky-dnscurve/forward/dns_packet.c
+--- mdempsky-dnscurve-fd16d68/forward/dns_packet.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/dns_packet.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,308 +0,0 @@
+-#include <stdint.h>
+-#include <errno.h>
+-#include <string.h>
+-
+-#include "crypto_box_curve25519xsalsa20poly1305.h"
+-
+-#include "dns.h"
+-#include "base32.h"
+-
+-extern uint8_t global_secret_key[32];
+-
+-unsigned
+-dns_packet_getname(uint8_t *name, unsigned namemax,
+-                   const uint8_t *buf, unsigned len, unsigned pos) {
+-  unsigned int loop = 0;
+-  unsigned int state = 0;
+-  unsigned int firstcompress = 0;
+-  unsigned int where;
+-  uint8_t ch;
+-  unsigned int namelen = 0;
+-
+-  for (;;) {
+-    if (pos >= len) goto PROTO;
+-    ch = buf[pos++];
+-    if (++loop >= 4096) goto PROTO;
+-
+-    if (state) {
+-      if (namelen + 1 > namemax) goto PROTO;
+-      name[namelen++] = ch;
+-      --state;
+-    } else {
+-      while (ch >= 192) {
+-        where = ch; where -= 192; where <<= 8;
+-        if (pos >= len) goto PROTO;
+-        ch = buf[pos++];
+-        if (!firstcompress) firstcompress = pos;
+-        pos = where + ch;
+-        if (pos >= len) goto PROTO;
+-        ch = buf[pos++];
+-        if (++loop >= 4096) goto PROTO;
+-      }
+-      if (ch >= 64) goto PROTO;
+-      if (namelen + 1 > namemax) goto PROTO;
+-      name[namelen++] = ch;
+-      if (!ch) break;
+-      state = ch;
+-    }
+-  }
+-
+-  if (firstcompress) return firstcompress;
+-  return pos;
+-
+- PROTO:
+-  errno = EPROTO;
+-  return 0;
+-}
+-
+-int
+-dns_curve_name_parse(uint8_t *box, unsigned *boxlen,
+-                     uint8_t *publickey, unsigned *zone,
+-                     const uint8_t *name) {
+-  uint8_t encoded_box[4096];
+-  unsigned encoded_boxlen = 0;
+-  unsigned i = 0;
+-
+-  errno = EPROTO;
+-
+-  // Concatenate the base32 encoded components which make up the nonce and box
+-  for (;;) {
+-    const uint8_t component_len = name[i];
+-    if (component_len == 54) {
+-      break;
+-    } else if (component_len > 50) {
+-      return 0;
+-    } else if (component_len == 0) {
+-      return 0;
+-    }
+-
+-    if (encoded_boxlen + component_len > sizeof(encoded_box))
+-      goto NAMETOOLONG;
+-    memcpy(encoded_box + encoded_boxlen, name + i + 1, component_len);
+-    encoded_boxlen += component_len;
+-    i += component_len + 1;
+-  }
+-
+-  // Base32 decode the box
+-  if (!base32_decode(box, boxlen, encoded_box, encoded_boxlen, 0))
+-    return 0;
+-
+-  // Next is the public key
+-  if (!(name[i] == 54 &&
+-        (name[i+1] & ~0x20) == 'X' &&
+-        name[i+2] == '1' &&
+-        (name[i+3] & ~0x20) == 'A'))
+-    return 0;
+-
+-  unsigned publickeylen = 32;
+-  if (!base32_decode(publickey, &publickeylen, name + i + 4, 51, 1))
+-    return 0;
+-  if (publickeylen != 32)
+-    return 0;
+-
+-  i += 54 + 1;
+-  *zone = i;
+-
+-  return 1;
+-
+- NAMETOOLONG:
+-  errno = ENAMETOOLONG;
+-  return 0;
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Try to parse a packet as a DNS curve request
+-//
+-// plaintext: (output) a 4096 byte buffer which receives the enclosed packet
+-// plaintextlen: (output) on success, the length of the data in @plaintext
+-// public_key: (output) the client's public key (32-bytes)
+-// nonce: (output) the client's nonce (12-bytes)
+-// qname: (output) set to point within @buffer to the start of the query name
+-// qnamelen: (output) set to contain the number of bytes of query name
+-// buffer: the packet contents
+-// n: number of bytes in @buffer
+-// returns: 1 on success if TXT format, 2 on success if streamlined format,
+-// 0 if this doesn't appear to be a DNS curve packet and -1 if the DNS
+-// curve packet is invalid
+-// -----------------------------------------------------------------------------
+-int
+-dns_curve_request_parse(uint8_t *plaintext, unsigned *plaintextlen,
+-                        uint8_t *public_key, uint8_t *nonce,
+-                        const uint8_t **qname, unsigned *qnamelen,
+-                        const uint8_t *buffer, unsigned n) {
+-  uint8_t fullnonce[24];
+-  uint8_t nonce_and_box[4096];
+-  unsigned nonce_and_box_len = sizeof(nonce_and_box);
+-
+-  // A streamlined formatted DNSCurve packet will be at least 68
+-  // bytes, while TXT formatted packets will be even longer.
+-  if (n < 68)
+-    return 0;
+-
+-  // Check for a streamlined packet.
+-  if (!memcmp(buffer, "Q6fnvWj8", 8)) {
+-    memcpy(public_key, buffer + 8, 32);
+-    memcpy(fullnonce, buffer + 40, 12);
+-    memset(fullnonce + 12, 0, 12);
+-    memset(nonce_and_box, 0, 16);
+-    memcpy(nonce_and_box + 16, buffer + 52, n - 52);
+-    nonce_and_box_len = n - 36;
+-
+-    if (-1 == crypto_box_curve25519xsalsa20poly1305_open
+-        (nonce_and_box, nonce_and_box, nonce_and_box_len, fullnonce,
+-         public_key, global_secret_key))
+-      return 0; // Not a valid DNSCurve packet, but might be a valid DNS query.
+-
+-    memcpy(nonce, fullnonce, 12);
+-    memcpy(plaintext, nonce_and_box + 32, nonce_and_box_len - 32);
+-    *plaintextlen = nonce_and_box_len - 32;
+-    return 1;
+-  }
+-
+-  // First two bytes are the client selected transaction id
+-  uint16_t transid;
+-  memcpy(&transid, buffer, 2);
+-
+-  // query, opcode 0, not authoritative, not truncated;
+-  // recursion may or may not be desired
+-  if ((buffer[2] & ~1) != 0)
+-    return 0;
+-
+-  if (memcmp(buffer + 3, "\x00" // recursion not available, no Z bits, RCODE 0
+-                         "\x00\x01"  // exactly one question
+-                         "\x00\x00"  // no answer records
+-                         "\x00\x00"  // no authority records
+-                         "\x00\x00", // no additional records
+-                         9))
+-    return 0;
+-
+-  uint8_t queryname[4096];
+-  unsigned pos = 12;
+-
+-  *qname = buffer + 12;
+-  pos = dns_packet_getname(queryname, sizeof(queryname), buffer, n, pos);
+-  if (!pos)
+-    return 0;
+-  *qnamelen = pos - 12;
+-
+-  if (n - pos != 4)
+-    return 0;
+-
+-  if (memcmp(&buffer[pos], "\x00\x10"      // query type TXT
+-                           "\x00\x01", 4)) // internet class
+-    return 0;
+-
+-  unsigned server_zone;
+-
+-  /* skip the first 4 bytes so the box is already in place */
+-  nonce_and_box_len -= 4;
+-  if (!dns_curve_name_parse(nonce_and_box + 4, &nonce_and_box_len,
+-                            public_key, &server_zone, queryname))
+-    return 0;
+-  nonce_and_box_len += 4;
+-
+-  if (nonce_and_box_len < 32)
+-    return 0;
+-  if (*plaintextlen < nonce_and_box_len - 32)
+-    return 0;
+-
+-  memcpy(fullnonce, nonce_and_box + 4, 12);
+-  memset(fullnonce + 12, 0, 12);
+-  memset(nonce_and_box, 0, 16);
+-
+-  if (-1 == crypto_box_curve25519xsalsa20poly1305_open
+-      (nonce_and_box, nonce_and_box, nonce_and_box_len, fullnonce,
+-       public_key, global_secret_key))
+-    return 0;
+-
+-  memcpy(nonce, fullnonce, 12);
+-  memcpy(plaintext, nonce_and_box + 32, nonce_and_box_len - 32);
+-  *plaintextlen = nonce_and_box_len - 32;
+-
+-  return buffer[2] ? 3 : 2;
+-}
+-
+-int
+-dns_curve_request_build(uint8_t *output, unsigned *ooutlen,
+-                        const uint8_t *box, unsigned boxlen,
+-                        const uint8_t *public_key,
+-                        const uint8_t *zone) {
+-  uint8_t encoded[4096];
+-  unsigned encodedlen = sizeof(encoded);
+-  unsigned i = 0, j = 0;
+-  const unsigned outlen = *ooutlen;
+-
+-  if (i + 10 > outlen)
+-    goto TOOBIG;
+-
+-  memcpy(output + i, "\x00" // query, opcode 0, not authoritative, not
+-                            // truncated, recursion not desired
+-                     "\x00" // recursion not available, no Z bits, RCODE 0
+-                     "\x00\x01"  // exactly one question
+-                     "\x00\x00"  // no answer records
+-                     "\x00\x00"  // no authority records
+-                     "\x00\x00", // no additional records
+-                     10);
+-  i += 10;
+-
+-  if (!base32_encode(encoded, &encodedlen, box, boxlen))
+-    return 0;
+-
+-  while (encodedlen) {
+-    unsigned component_length = encodedlen;
+-    if (component_length > 50)
+-      component_length = 50;
+-
+-    if (i >= outlen)
+-      goto TOOBIG;
+-    output[i++] = component_length;
+-    if (i + component_length >= outlen)
+-      goto TOOBIG;
+-    memcpy(output + i, encoded + j, component_length);
+-    encodedlen -= component_length;
+-    j += component_length;
+-    i += component_length;
+-  }
+-
+-  encodedlen = sizeof(encoded);
+-  if (!base32_encode(encoded, &encodedlen, public_key, 32))
+-    return 0;
+-  if (i + 55 >= outlen)
+-    goto TOOBIG;
+-
+-  memcpy(output + i, "\x36x1a", 4);
+-  i += 4;
+-  memcpy(output + i, encoded, 51);
+-  i += 51;
+-
+-  j = 0;
+-  while (zone[j]) {
+-    const unsigned component_length = zone[j++];
+-    if (i >= outlen)
+-      goto TOOBIG;
+-    output[i++] = component_length;
+-    if (i + component_length >= outlen)
+-      goto TOOBIG;
+-    memcpy(output + i, zone + j, component_length);
+-    i += component_length;
+-    j += component_length;
+-  }
+-  if (i >= outlen)
+-    goto TOOBIG;
+-  output[i++] = 0;
+-
+-  if (i + 4 > outlen)
+-    goto TOOBIG;
+-
+-  memcpy(output + i, "\x00\x10"      // query type TXT
+-                     "\x00\x01", 4); // internet class
+-  i += 4;
+-
+-  *ooutlen = i;
+-
+-  return 1;
+-
+- TOOBIG:
+-  errno = E2BIG;
+-  return 0;
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/forward/dns_random.c mdempsky-dnscurve/forward/dns_random.c
+--- mdempsky-dnscurve-fd16d68/forward/dns_random.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/dns_random.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,48 +0,0 @@
+-#include <stdint.h>
+-
+-#include "randombytes.h"
+-
+-static uint32_t seed[32];
+-static uint32_t in[12];
+-static uint32_t out[8];
+-static int outleft = 0;
+-
+-#define ROTATE(x,b) (((x) << (b)) | ((x) >> (32 - (b))))
+-#define MUSH(i,b) x = t[i] += (((x ^ seed[i]) + sum) ^ ROTATE(x,b));
+-
+-static void
+-surf(void) {
+-  uint32_t t[12]; uint32_t x; uint32_t sum = 0;
+-  int r; int i; int loop;
+-
+-  for (i = 0;i < 12;++i) t[i] = in[i] ^ seed[12 + i];
+-  for (i = 0;i < 8;++i) out[i] = seed[24 + i];
+-  x = t[11];
+-  for (loop = 0;loop < 2;++loop) {
+-    for (r = 0;r < 16;++r) {
+-      sum += 0x9e3779b9;
+-      MUSH(0,5) MUSH(1,7) MUSH(2,9) MUSH(3,13)
+-      MUSH(4,5) MUSH(5,7) MUSH(6,9) MUSH(7,13)
+-      MUSH(8,5) MUSH(9,7) MUSH(10,9) MUSH(11,13)
+-    }
+-    for (i = 0;i < 8;++i) out[i] ^= t[i + 4];
+-  }
+-}
+-
+-void
+-dns_random_init() {
+-  randombytes((uint8_t *) in, sizeof(in));
+-}
+-
+-unsigned int
+-dns_random(unsigned int n) {
+-  if (!n) return 0;
+-
+-  if (!outleft) {
+-    if (!++in[0]) if (!++in[1]) if (!++in[2]) ++in[3];
+-    surf();
+-    outleft = 8;
+-  }
+-
+-  return out[--outleft] % n;
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/forward/dns_random.h mdempsky-dnscurve/forward/dns_random.h
+--- mdempsky-dnscurve-fd16d68/forward/dns_random.h	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/dns_random.h	1970-01-01 01:00:00.000000000 +0100
+@@ -1,14 +0,0 @@
+-#ifndef DNS_RANDOM_H
+-#define DNS_RANDOM_H
+-
+-// -----------------------------------------------------------------------------
+-// Uses randombytes() to see the RNG
+-// -----------------------------------------------------------------------------
+-void dns_random_init();
+-
+-// -----------------------------------------------------------------------------
+-// Get a random number in [0..n-1]
+-// -----------------------------------------------------------------------------
+-unsigned int dns_random(unsigned int n);
+-
+-#endif  // DNS_RANDOM_H
+diff -Nur mdempsky-dnscurve-fd16d68/forward/forward.c mdempsky-dnscurve/forward/forward.c
+--- mdempsky-dnscurve-fd16d68/forward/forward.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/forward.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,595 +0,0 @@
+-#define _POSIX_C_SOURCE 200809
+-
+-#include <string.h>
+-#include <stdio.h>
+-#include <stdlib.h>
+-
+-#include <unistd.h>
+-#include <time.h>
+-#include <fcntl.h>
+-#include <errno.h>
+-#include <sys/socket.h>
+-#include <sys/epoll.h>
+-#include <netinet/in.h>
+-#include <arpa/inet.h>
+-
+-#include "crypto_box_curve25519xsalsa20poly1305.h"
+-#include "randombytes.h"
+-
+-#include "dns.h"
+-#include "ip_parse.h"
+-#include "dns_random.h"
+-
+-// The server's private key
+-uint8_t global_secret_key[32];
+-// An open descriptor to /dev/urandom
+-int global_urandom_fd = -1;
+-// The IP address (big-endian) of the backend server
+-static uint32_t global_target_address;
+-
+-static const unsigned TIMEOUT = 5000;  // 5 seconds
+-
+-// -----------------------------------------------------------------------------
+-// Our timeouts are special since they are always for the same amount of time.
+-// Thus we simply have a double-linked list for timeouts. When transmitting a
+-// packet we put the txidentry at the head of the timeout queue and we expire
+-// entries from the tail. When a reply comes back, the double-linked nature of
+-// the list means that we can remove the element quickly.
+-// -----------------------------------------------------------------------------
+-struct txidentry {
+-  struct txidentry *to_prev, *to_next;  // timeout double-linked list
+-  uint64_t tx_time;                     // transmit time (milliseconds)
+-  int fd;                               // socket
+-  uint32_t source_ip;
+-  uint16_t source_port;
+-  uint16_t source_txid;
+-  uint16_t target_txid;
+-
+-  /* 0 is plain DNS, 1 is streamlined, 2 is TXT with RD=0, 3 is TXT with RD=1 */
+-  uint8_t is_dnscurve;
+-
+-  // The following are only valid if @is_dnscurve is non-zero
+-  uint8_t public_key[32];
+-  uint8_t nonce[12];
+-  uint16_t qnamelen;                  // length of the client's query name
+-  uint8_t qname[0];                    // query name follows directly
+-};
+-
+-// The head and tail of the timeout queue.
+-static struct txidentry *global_txid_to_head = NULL;
+-static struct txidentry *global_txid_to_tail = NULL;
+-
+-// -----------------------------------------------------------------------------
+-// Append data to a buffer, if it will fit
+-//
+-// output: a buffer
+-// len: the length of @output
+-// pos: (in/out) the current position in @buffer - updated on exit
+-// input: the data to be appended
+-// inlen: the length of @input
+-// returns: 1 on success, 0 otherwise
+-// -----------------------------------------------------------------------------
+-static int
+-buffer_append(uint8_t *output, unsigned len, unsigned *pos,
+-              const void *input, unsigned inlen) {
+-  if (*pos + inlen > len)
+-    return 0;
+-
+-  memcpy(output + *pos, input, inlen);
+-  *pos += inlen;
+-
+-  return 1;
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Return the current mission time in milliseconds
+-// -----------------------------------------------------------------------------
+-static uint64_t
+-time_now() {
+-  struct timespec ts;
+-
+-  if (clock_gettime(CLOCK_MONOTONIC, &ts)) {
+-    perror("clock_gettime");
+-    abort();  // there are no temporary errors with clock_gettime
+-  }
+-
+-  uint64_t msecs = ts.tv_sec;
+-  msecs *= 1000;
+-  msecs += ts.tv_nsec / 1000000;
+-
+-  return msecs;
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Create a 12-byte DNSCurve nonce
+-// -----------------------------------------------------------------------------
+-static void
+-dns_nonce(uint8_t nonce[12])
+-{
+-  static uint64_t x = 0; /* XXX: use nanoseconds since 1970 */
+-  unsigned i;
+-
+-  ++x;
+-  memcpy(nonce, &x, 8);
+-  for (i = 8; i < 12; ++i)
+-    nonce[i] = dns_random(256);
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Get a socket with a random port number to transmit on or -1 on error
+-// -----------------------------------------------------------------------------
+-static int
+-tx_socket_get() {
+-  const int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+-  if (sock < 0)
+-    return -1;
+-
+-  struct sockaddr_in sin;
+-  memset(&sin, 0, sizeof(sin));
+-  sin.sin_family = AF_INET;
+-
+-  unsigned i;
+-  for (i = 0; i < 10; ++i) {
+-    uint16_t port = 1025 + dns_random(64510);
+-    sin.sin_port = htons(port);
+-
+-    if (bind(sock, (struct sockaddr *) &sin, sizeof(sin)) == 0)
+-      return sock;
+-  }
+-
+-  // Give up and let the kernel pick the port number for us.
+-  return sock;
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Expire any txids
+-// -----------------------------------------------------------------------------
+-static void
+-txids_expire(uint64_t current_time) {
+-  while (global_txid_to_tail) {
+-    struct txidentry *entry = global_txid_to_tail;
+-    if (entry->tx_time + TIMEOUT < current_time) {
+-      if (entry->to_prev) {
+-        entry->to_prev->to_next = NULL;
+-        global_txid_to_tail = entry->to_prev;
+-      } else {
+-        global_txid_to_head = NULL;
+-        global_txid_to_tail = NULL;
+-      }
+-      close(entry->fd);
+-      free(entry);
+-    } else {
+-      break;
+-    }
+-  }
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Return the number of milliseconds until the next txid expires, or -1 if
+-// nothing is inflight.
+-// -----------------------------------------------------------------------------
+-static int
+-txids_expire_sleep(uint64_t current_time) {
+-  if (!global_txid_to_tail)
+-    return -1;
+-
+-  if (global_txid_to_tail->tx_time + TIMEOUT < current_time)
+-    return 0;
+-  return (10 + global_txid_to_tail->tx_time + TIMEOUT) - current_time;
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Transmit a packet to the server on a new socket. Return the txidentry of the
+-// new request with @fd valid.
+-//
+-// extra: extra bytes to allocate at the end of the returned txidentry
+-// -----------------------------------------------------------------------------
+-static struct txidentry *
+-dns_transmit(const uint8_t *packet, unsigned len, unsigned extra) {
+-  int sock = tx_socket_get();
+-  if (sock < 0)
+-    return NULL;
+-
+-  struct sockaddr_in sin;
+-  memset(&sin, 0, sizeof(sin));
+-  sin.sin_family = AF_INET;
+-  sin.sin_addr.s_addr = global_target_address;
+-  sin.sin_port = htons(53);
+-
+-  ssize_t n;
+-
+-  do {
+-    n = sendto(sock, packet, len, MSG_DONTWAIT, (struct sockaddr *) &sin, sizeof(sin));
+-  } while (n == -1 && errno == EINTR);
+-
+-  if (n != len) {
+-    close(sock);
+-    return NULL;
+-  }
+-
+-  struct txidentry *entry = malloc(sizeof(struct txidentry) + extra);
+-  if (!entry) {
+-    close(sock);
+-    return NULL;
+-  }
+-  entry->fd = sock;
+-
+-  return entry;
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Forward a packet to the backend server
+-//
+-// packet: DNS packet
+-// length: number of bytes in @packet
+-// efd: epoll file descriptor into which the new socket is added
+-// sin: source location
+-// is_dnscurve: true iff the source packet was DNS curve protected
+-// public_key: (if @is_dnscurve) the client's public key (32 bytes)
+-// nonce: (if @is_dnscurve) the client's nonce (12 bytes)
+-// qname: (if @is_dnscurve) the original query string
+-// qnamelen: (if @is_dnscurve) number of bytes in @qname
+-// -----------------------------------------------------------------------------
+-static void
+-dns_forward(const uint8_t *packet, unsigned length, int efd,
+-            const struct sockaddr_in *sin, uint16_t txid,
+-            uint8_t is_dnscurve,
+-            const uint8_t *public_key, const uint8_t *nonce,
+-            const uint8_t *qname, unsigned qnamelen) {
+-  if (length < 16)
+-    return;  // clearly bogus, drop it.
+-
+-  struct txidentry *entry = dns_transmit(packet, length, is_dnscurve ? qnamelen : 0);
+-  if (!entry)
+-    return;
+-
+-  entry->is_dnscurve = is_dnscurve;
+-  if (is_dnscurve) {
+-    memcpy(entry->public_key, public_key, 32);
+-    memcpy(entry->nonce, nonce, 12);
+-    entry->qnamelen = qnamelen;
+-    memcpy(entry->qname, qname, qnamelen);
+-  }
+-
+-  struct epoll_event event;
+-  event.data.ptr = entry;
+-  event.events = EPOLLIN;
+-
+-  if (epoll_ctl(efd, EPOLL_CTL_ADD, entry->fd, &event)) {
+-    close(entry->fd);
+-    free(entry);
+-  }
+-
+-  entry->source_port = sin->sin_port;
+-  entry->source_ip = sin->sin_addr.s_addr;
+-  entry->source_txid = txid;
+-  entry->target_txid = *((uint16_t *) packet);
+-  entry->tx_time = time_now();
+-
+-  entry->to_prev = NULL;
+-  entry->to_next = global_txid_to_head;
+-  if (!entry->to_next) {
+-    global_txid_to_tail = entry;
+-  } else {
+-    entry->to_next->to_prev = entry;
+-  }
+-  global_txid_to_head = entry;
+-}
+-
+-// -----------------------------------------------------------------------------
+-// Pass a reply back to the requestor
+-//
+-// packet: the reply from the backend server. 32 free bytes are available preceeding
+-//   this buffer
+-// length: number of bytes in @packet
+-// entry: the txidentry for this request
+-// -----------------------------------------------------------------------------
+-static void
+-dns_reply(uint8_t *packet, unsigned length, struct txidentry *entry) {
+-  if (entry->to_prev) {
+-    entry->to_prev->to_next = entry->to_next;
+-  } else {
+-    global_txid_to_head = entry->to_next;
+-  }
+-
+-  if (entry->to_next) {
+-    entry->to_next->to_prev = entry->to_prev;
+-  } else {
+-    global_txid_to_tail = entry->to_prev;
+-  }
+-
+-  struct sockaddr_in sin;
+-  memset(&sin, 0, sizeof(sin));
+-  sin.sin_family = AF_INET;
+-  sin.sin_addr.s_addr = entry->source_ip;
+-  sin.sin_port = entry->source_port;
+-
+-  if (!entry->is_dnscurve) {
+-    ssize_t n;
+-
+-    do {
+-      n = sendto(3, packet, length, MSG_DONTWAIT,
+-                 (struct sockaddr *) &sin, sizeof(sin));
+-    } while (n == -1 && errno == EINTR);
+-
+-    return;
+-  }
+-
+-  // client is DNS curve. Need to construct a wrapping
+-
+-  uint8_t nonce[24];
+-  uint8_t wrapper[4096];
+-  uint8_t nonce_and_box[4096];
+-
+-  if (32 + length > sizeof(nonce_and_box))
+-    return;
+-
+-  memcpy(nonce, entry->nonce, 12);
+-  dns_nonce(nonce + 12);
+-  memset(packet - 32, 0, 32);
+-
+-  crypto_box_curve25519xsalsa20poly1305
+-    (nonce_and_box, packet - 32, length + 32, nonce,
+-     entry->public_key, global_secret_key);
+-
+-  unsigned pos = 0;
+-
+-  if (entry->is_dnscurve == 1) {
+-    if (!buffer_append(wrapper, sizeof(wrapper), &pos, "R6fnvWJ8", 8))
+-      return;
+-    if (!buffer_append(wrapper, sizeof(wrapper), &pos, nonce, 24))
+-      return;
+-    if (!buffer_append(wrapper, sizeof(wrapper), &pos, nonce_and_box + 16, length + 16))
+-      return;
+-  } else {
+-    memcpy(nonce_and_box + 4, nonce + 12, 12);
+-
+-    const unsigned payload_length = 12 + 16 + length;
+-
+-    if (!buffer_append(wrapper, sizeof(wrapper), &pos, &entry->source_txid, 2))
+-      return;
+-    if (!buffer_append(wrapper, sizeof(wrapper), &pos,
+-		       (entry->is_dnscurve == 2)
+-		       ? ("\x84" // response, opcode 0, authoritative,
+-			         // not truncated, recursion not desired
+-			  "\x00" // recursion not available, no Z bits, RCODE 0
+-			  "\x00\x01"   // one question
+-			  "\x00\x01"   // one answer
+-			  "\x00\x00"   // no authority
+-			  "\x00\x00")  // no additional
+-		       : ("\x85" // response, opcode 0, authoritative,
+-			         // not truncated, recursion desired
+-			  "\x00" // recursion not available, no Z bits, RCODE 0
+-			  "\x00\x01"   // one question
+-			  "\x00\x01"   // one answer
+-			  "\x00\x00"   // no authority
+-			  "\x00\x00"), // no additional
+-                       10))
+-      return;
+-    if (!buffer_append(wrapper, sizeof(wrapper), &pos,
+-                       entry->qname, entry->qnamelen))
+-      return;
+-    if (!buffer_append(wrapper, sizeof(wrapper), &pos,
+-                       "\x00\x10"  // query type TXT
+-                       "\x00\x01"  // Internet class
+-                       "\xc0\x0c"  // pointer back to the first qname
+-                       "\x00\x10"  // TXT reply
+-                       "\x00\x01"  // Internet class
+-                       "\x00\x00\x00\x00",  // TTL 0
+-                       14))
+-      return;
+-
+-    // The DNS RDATA is a series of charactor strings, which are 8-bit length
+-    // prefixed strings. Thus we need to split the nonce_and_box into parts, at
+-    // most 255 bytes long.
+-    const unsigned rdatalen = payload_length + (payload_length + 254) / 255;
+-    const uint16_t rdatalen_be = htons(rdatalen);
+-
+-    if (!buffer_append(wrapper, sizeof(wrapper), &pos, &rdatalen_be, 2))
+-      return;
+-
+-    unsigned todo = payload_length, i = 4;
+-    while (todo) {
+-      unsigned stringlen = todo;
+-      if (stringlen > 255) stringlen = 255;
+-      const uint8_t strlenbyte = stringlen;
+-
+-      if (!buffer_append(wrapper, sizeof(wrapper), &pos, &strlenbyte, 1))
+-        return;
+-
+-      if (!buffer_append(wrapper, sizeof(wrapper), &pos, nonce_and_box + i, stringlen))
+-        return;
+-
+-      todo -= stringlen;
+-      i += stringlen;
+-    }
+-  }
+-
+-  ssize_t n;
+-
+-  do {
+-    n = sendto(3, wrapper, pos, MSG_DONTWAIT,
+-               (struct sockaddr *) &sin, sizeof(sin));
+-  } while (n == -1 && errno == EINTR);
+-}
+-
+-static int
+-curve_worker() {
+-  uint8_t buffer[4096];
+-  uint8_t plaintext[4096];
+-  unsigned plaintextlen;
+-
+-  const int efd = epoll_create(32);
+-  if (efd < 0) {
+-    perror("epoll_create");
+-    return 1;
+-  }
+-
+-  struct epoll_event curve_event;
+-  curve_event.data.ptr = NULL;
+-  curve_event.events = EPOLLIN;
+-  if (epoll_ctl(efd, EPOLL_CTL_ADD, 3, &curve_event)) {
+-    perror("epoll_ctl");
+-    return 1;
+-  }
+-
+-  for (;;) {
+-    struct epoll_event events[8];
+-
+-    uint64_t current_time = time_now();
+-    txids_expire(current_time);
+-
+-    int r;
+-    do {
+-      r = epoll_wait(efd, events, 8, txids_expire_sleep(current_time));
+-    } while (r == -1 && errno == EINTR);
+-
+-    if (r < 0) {
+-      perror("epoll_wait");
+-      return 1;
+-    }
+-
+-    struct sockaddr_in sin;
+-    socklen_t sinlen;
+-    ssize_t n;
+-    const uint8_t *qname;
+-    unsigned qnamelen;
+-    uint8_t public_key[32], nonce[12];
+-    unsigned i;
+-
+-    for (i = 0; i < r; ++i) {
+-      if (events[i].data.ptr == NULL) {
+-        // This is the world facing, DNS curve, UDP socket
+-
+-        sinlen = sizeof(sin);
+-        do {
+-          n = recvfrom(3, buffer, sizeof(buffer), MSG_DONTWAIT,
+-                       (struct sockaddr *) &sin, &sinlen);
+-        } while (n == -1 && errno == EINTR);
+-
+-        if (n < 0) {
+-          perror("reading from curve socket");
+-          continue;
+-        }
+-
+-        if (n < 2) {
+-          // packet is too short
+-          continue;
+-        }
+-
+-        const uint16_t txid = *((uint16_t *) buffer);
+-        plaintextlen = sizeof(plaintext);
+-        int cr;
+-        cr = dns_curve_request_parse(plaintext, &plaintextlen, public_key,
+-                                     nonce, &qname, &qnamelen, buffer, n);
+-        if (cr == 0) {
+-          // not a DNS curve packet. Forward directly
+-          dns_forward(buffer, n, efd, &sin, txid, 0, NULL, NULL, NULL, 0);
+-        } else if (cr == -1) {
+-          // invalid DNS curve packet. Drop
+-        } else {
+-          // valid DNS curve packet, inner packet in plaintext
+-          dns_forward(plaintext, plaintextlen, efd, &sin, txid, cr, public_key,
+-                      nonce, qname, qnamelen);
+-        }
+-      } else {
+-        // this is a socket talking to our server
+-        struct txidentry *entry = events[i].data.ptr;
+-
+-        sinlen = sizeof(sin);
+-        do {
+-          n = recvfrom(entry->fd, buffer + 32, sizeof(buffer) - 32, MSG_DONTWAIT,
+-                       (struct sockaddr *) &sin, &sinlen);
+-        } while (n == -1 && errno == EINTR);
+-
+-        if (n < 0) {
+-          perror("reading from curve socket");
+-          continue;
+-        }
+-
+-        if (sin.sin_addr.s_addr != global_target_address ||
+-            sin.sin_port != htons(53) ||
+-            n < 2 ||
+-            *((uint16_t *) (buffer + 32)) != entry->target_txid)
+-          continue;  // bogus packet
+-
+-        dns_reply(buffer + 32, n, entry);
+-
+-        close(entry->fd);
+-        free(entry);
+-      }
+-    }
+-  }
+-
+-  return 1;
+-}
+-
+-static int
+-hex_char(uint8_t *out, char in) {
+-  if (in >= '0' && in <= '9') {
+-    *out = in - '0';
+-    return 1;
+-  } else if (in >= 'a' && in <= 'f') {
+-    *out = 10 + (in - 'a');
+-    return 1;
+-  } else if (in >= 'A' && in <= 'F') {
+-    *out = 10 + (in - 'A');
+-    return 1;
+-  } else {
+-    return 0;
+-  }
+-}
+-
+-static int
+-hex_decode(uint8_t *dest, const char *src) {
+-  while (*src) {
+-    uint8_t v1, v2;
+-    if (!hex_char(&v1, *src++))
+-      return 0;
+-    if (!hex_char(&v2, *src++))
+-      return 0;
+-
+-    *dest++ = (v1 << 4) | v2;
+-  }
+-
+-  return 1;
+-}
+-
+-static int
+-usage(const char *argv0) {
+-  fprintf(stderr, "Usage: %s <DNS server IP>\n", argv0);
+-  return 1;
+-}
+-
+-int
+-main(int argc, char **argv) {
+-  if (argc != 2) return usage(argv[0]);
+-
+-  if (!ip_parse(&global_target_address, argv[1]))
+-    return usage(argv[0]);
+-
+-  global_urandom_fd = open("/dev/urandom", O_RDONLY);
+-  if (global_urandom_fd < 0) {
+-    perror("Opening /dev/urandom");
+-    return 1;
+-  }
+-
+-  dns_random_init();
+-
+-  if (!getenv("DNSCURVE_PRIVATE_KEY")) {
+-    fprintf(stderr, "$DNSCURVE_PRIVATE_KEY must be set\n");
+-    return 1;
+-  }
+-
+-  if (strlen(getenv("DNSCURVE_PRIVATE_KEY")) != 64) {
+-    fprintf(stderr, "$DNSCURVE_PRIVATE_KEY must 64 bytes long\n");
+-    return 1;
+-  }
+-
+-  if (!hex_decode(global_secret_key, getenv("DNSCURVE_PRIVATE_KEY"))) {
+-    fprintf(stderr, "$DNSCURVE_PRIVATE_KEY invalid\n");
+-    return 1;
+-  }
+-
+-  return curve_worker();
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/forward/ip_parse.c mdempsky-dnscurve/forward/ip_parse.c
+--- mdempsky-dnscurve-fd16d68/forward/ip_parse.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/ip_parse.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,17 +0,0 @@
+-#define _BSD_SOURCE
+-
+-#include <sys/socket.h>
+-#include <netinet/in.h>
+-#include <arpa/inet.h>
+-
+-int
+-ip_parse(uint32_t *out, const char *in) {
+-  struct in_addr addr;
+-
+-  if (!inet_aton(in, &addr)) {
+-    return 0;
+-  } else {
+-    *out = addr.s_addr;
+-    return 1;
+-  }
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/forward/ip_parse.h mdempsky-dnscurve/forward/ip_parse.h
+--- mdempsky-dnscurve-fd16d68/forward/ip_parse.h	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/ip_parse.h	1970-01-01 01:00:00.000000000 +0100
+@@ -1,6 +0,0 @@
+-#ifndef IP_PARSE_H
+-#define IP_PARSE_H
+-
+-int ip_parse(uint32_t *out, const char *in);
+-
+-#endif
+diff -Nur mdempsky-dnscurve-fd16d68/forward/Makefile mdempsky-dnscurve/forward/Makefile
+--- mdempsky-dnscurve-fd16d68/forward/Makefile	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/Makefile	1970-01-01 01:00:00.000000000 +0100
+@@ -1,54 +0,0 @@
+-NACLINC=
+-NACLLD=
+-CFLAGS=-Wall -ggdb -std=c99 $(NACLINC)
+-TARGETS=forward udpserver dnscurve-keygen dnscurve-test-client base32-test
+-
+-targets: $(TARGETS)
+-
+-clean:
+-	rm -f *.o $(TARGETS)
+-
+-dnscurve-test-client: dnscurve-test-client.o randombytes.o ip_parse.o dns_packet.o base32.o
+-	gcc $(CFLAGS) -o dnscurve-test-client dnscurve-test-client.o randombytes.o ip_parse.o dns_packet.o base32.o $(NACLLD) -lnacl
+-
+-forward: forward.o dns_packet.o base32.o randombytes.o ip_parse.o dns_random.o
+-	gcc $(CFLAGS) -o forward forward.o dns_packet.o base32.o randombytes.o ip_parse.o dns_random.o -lpthread $(NACLLD) -lnacl -lrt
+-
+-udpserver: udpserver.o ip_parse.o
+-	gcc $(CFLAGS) -o udpserver udpserver.o ip_parse.o
+-
+-dnscurve-keygen: dnscurve-keygen.o base32.o randombytes.o
+-	gcc $(CFLAGS) -o dnscurve-keygen dnscurve-keygen.o base32.o randombytes.o $(NACLLD) -lnacl
+-
+-base32-test: base32-test.o base32.o
+-	gcc $(CFLAGS) -o base32-test base32-test.o base32.o
+-
+-forward.o: forward.c dns.h
+-	gcc $(CFLAGS) -c forward.c
+-
+-dns_packet.o: dns_packet.c base32.h dns.h
+-	gcc $(CFLAGS) -c dns_packet.c
+-
+-base32-test.o: base32-test.c base32.h
+-	gcc $(CFLAGS) -c base32-test.c
+-
+-base32.o: base32.c base32.h
+-	gcc $(CFLAGS) -c base32.c
+-
+-randombytes.o: randombytes.c
+-	gcc $(CFLAGS) -c randombytes.c
+-
+-ip_parse.o: ip_parse.c
+-	gcc $(CFLAGS) -c ip_parse.c
+-
+-dns_random.o: ip_parse.c
+-	gcc $(CFLAGS) -c dns_random.c
+-
+-udpserver.o: udpserver.c
+-	gcc $(CFLAGS) -c udpserver.c
+-
+-dnscurve-keygen.o: dnscurve-keygen.c
+-	gcc $(CFLAGS) -c dnscurve-keygen.c
+-
+-dnscurve-test-client.o: dnscurve-test-client.c
+-	gcc $(CFLAGS) -c dnscurve-test-client.c
+diff -Nur mdempsky-dnscurve-fd16d68/forward/randombytes.c mdempsky-dnscurve/forward/randombytes.c
+--- mdempsky-dnscurve-fd16d68/forward/randombytes.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/randombytes.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,24 +0,0 @@
+-#include <sys/types.h>
+-#include <sys/stat.h>
+-#include <fcntl.h>
+-#include <unistd.h>
+-
+-extern int global_urandom_fd;
+-
+-void
+-randombytes(unsigned char *x, unsigned long long xlen) {
+-  int i;
+-
+-  while (xlen > 0) {
+-    if (xlen < 1048576) i = xlen; else i = 1048576;
+-
+-    i = read(global_urandom_fd, x, i);
+-    if (i < 1) {
+-      sleep(1);
+-      continue;
+-    }
+-
+-    x += i;
+-    xlen -= i;
+-  }
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/forward/README mdempsky-dnscurve/forward/README
+--- mdempsky-dnscurve-fd16d68/forward/README	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/README	1970-01-01 01:00:00.000000000 +0100
+@@ -1,8 +0,0 @@
+-DNSCurve forwarder
+-
+-This directory contains a prototype DNSCurve forwarder.  Currently it
+-only supports UDP transport, and it also relies on Linux's epoll(2)
+-system call.
+-
+-Faried Nawaz has written instructions on how to install and setup the
+-forwarder at http://marc.info/?l=djbdns&m=124905592501607&w=2.
+diff -Nur mdempsky-dnscurve-fd16d68/forward/udpserver.c mdempsky-dnscurve/forward/udpserver.c
+--- mdempsky-dnscurve-fd16d68/forward/udpserver.c	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/forward/udpserver.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,88 +0,0 @@
+-// -----------------------------------------------------------------------------
+-// udpserver: start a child process with a UDP socket bound on fd 3
+-//
+-// % udpserver 0.0.0.0 53 my-dns-server
+-//
+-// Since binding to ports < 1024 is a priviledged operation, it's good to
+-// separate it from the process that will end up using the socket in question.
+-// Thus a pipeline like:
+-//
+-// % udpserver 0.0.0.0 53 setuidgid nonroot my-dns-server
+-//
+-// Can be used to ensure that my-dns-server doesn't need root to run.
+-//
+-// The child process must expect the UDP socket to be installed on fd 3.
+-// -----------------------------------------------------------------------------
+-#include <stdio.h>
+-#include <stdlib.h>
+-#include <string.h>
+-
+-#include <unistd.h>
+-#include <sys/socket.h>
+-#include <netinet/in.h>
+-#include <arpa/inet.h>
+-#include <errno.h>
+-
+-#include "ip_parse.h"
+-
+-static int
+-usage(const char *argv0) {
+-  fprintf(stderr, "Usage: %s <IP address> <UDP port number> <child process and args>\n",
+-          argv0);
+-  return 1;
+-}
+-
+-int
+-main(int argc, char **argv) {
+-  if (argc < 4)
+-    return usage(argv[0]);
+-
+-  uint32_t bind_ip;
+-  if (!ip_parse(&bind_ip, argv[1]))
+-    return usage(argv[0]);
+-
+-  char *endptr;
+-  unsigned long port = strtoul(argv[2], &endptr, 10);
+-  if (*endptr)
+-    return usage(argv[0]);
+-
+-  if (port == 0 || port > 65535) {
+-    fprintf(stderr, "Port number out of range (1..65535)\n");
+-    return 1;
+-  }
+-
+-  const int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+-  if (sock < 0) {
+-    perror("socket");
+-    return 1;
+-  }
+-
+-  struct sockaddr_in sin;
+-  memset(&sin, 0, sizeof(sin));
+-  sin.sin_family = AF_INET;
+-  sin.sin_addr.s_addr = bind_ip;
+-  sin.sin_port = htons(port);
+-
+-  int n;
+-  do {
+-    n = bind(sock, (struct sockaddr *) &sin, sizeof(sin));
+-    if (n) {
+-      if (errno == EADDRINUSE || errno == ENOMEM) {
+-        sleep(1);
+-        continue;
+-      }
+-      perror("bind");
+-      return 1;
+-    }
+-  } while (n);
+-
+-  if (sock != 3) {
+-    dup2(sock, 3);
+-    close(sock);
+-  }
+-
+-  execvp(argv[3], &argv[3]);
+-  perror("execvp");
+-
+-  return 1;
+-}
+diff -Nur mdempsky-dnscurve-fd16d68/tools/attic/dns-make-query.py mdempsky-dnscurve/tools/attic/dns-make-query.py
+--- mdempsky-dnscurve-fd16d68/tools/attic/dns-make-query.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/tools/attic/dns-make-query.py	1970-01-01 01:00:00.000000000 +0100
+@@ -1,5 +0,0 @@
+-import sys
+-import dns
+-
+-if __name__ == '__main__':
+-  sys.stdout.write(dns.dns_build_query(sys.argv[1], sys.argv[2]))
+diff -Nur mdempsky-dnscurve-fd16d68/tools/attic/dns-print.py mdempsky-dnscurve/tools/attic/dns-print.py
+--- mdempsky-dnscurve-fd16d68/tools/attic/dns-print.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/tools/attic/dns-print.py	1970-01-01 01:00:00.000000000 +0100
+@@ -1,6 +0,0 @@
+-import sys
+-import dns
+-
+-if __name__ == '__main__':
+-  packet = sys.stdin.read()
+-  dns.dns_print(packet)
+diff -Nur mdempsky-dnscurve-fd16d68/tools/attic/nacl-box-open.py mdempsky-dnscurve/tools/attic/nacl-box-open.py
+--- mdempsky-dnscurve-fd16d68/tools/attic/nacl-box-open.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/tools/attic/nacl-box-open.py	1970-01-01 01:00:00.000000000 +0100
+@@ -1,18 +0,0 @@
+-import sys
+-
+-try:
+-  import nacl
+-except ImportError:
+-  import slownacl as nacl
+-import netstring
+-
+-def main():
+-  sk = netstring.read(sys.stdin)
+-  pk = netstring.read(sys.stdin)
+-  nonce = netstring.read(sys.stdin)
+-  packet = netstring.read(sys.stdin)
+-
+-  sys.stdout.write(nacl.box_curve25519xsalsa20poly1305_open(packet, nonce, pk, sk))
+-
+-if __name__ == '__main__':
+-  main()
+diff -Nur mdempsky-dnscurve-fd16d68/tools/attic/nacl-box.py mdempsky-dnscurve/tools/attic/nacl-box.py
+--- mdempsky-dnscurve-fd16d68/tools/attic/nacl-box.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/tools/attic/nacl-box.py	1970-01-01 01:00:00.000000000 +0100
+@@ -1,18 +0,0 @@
+-import sys
+-
+-try:
+-  import nacl
+-except ImportError:
+-  import slownacl as nacl
+-import netstring
+-
+-def main():
+-  sk = netstring.read(sys.stdin)
+-  pk = netstring.read(sys.stdin)
+-  nonce = netstring.read(sys.stdin)
+-  packet = sys.stdin.read()
+-
+-  netstring.write(sys.stdout, nacl.box_curve25519xsalsa20poly1305(packet, nonce, pk, sk))
+-
+-if __name__ == '__main__':
+-  main()
+diff -Nur mdempsky-dnscurve-fd16d68/tools/attic/nacl-keypair.py mdempsky-dnscurve/tools/attic/nacl-keypair.py
+--- mdempsky-dnscurve-fd16d68/tools/attic/nacl-keypair.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/tools/attic/nacl-keypair.py	1970-01-01 01:00:00.000000000 +0100
+@@ -1,15 +0,0 @@
+-import sys
+-
+-try:
+-  import nacl
+-except ImportError:
+-  import slownacl as nacl
+-import netstring
+-
+-def main():
+-  (pk, sk) = nacl.box_curve25519xsalsa20poly1305_keypair()
+-  netstring.write(sys.stdout, sk)
+-  netstring.write(sys.stdout, pk)
+-
+-if __name__ == '__main__':
+-  main()
+diff -Nur mdempsky-dnscurve-fd16d68/tools/attic/netstring.py mdempsky-dnscurve/tools/attic/netstring.py
+--- mdempsky-dnscurve-fd16d68/tools/attic/netstring.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve/tools/attic/netstring.py	1970-01-01 01:00:00.000000000 +0100
+@@ -1,22 +0,0 @@
+-def read(f):
+-  length = ''
+-  while len(length) < 16:
+-    c = f.read(1)
+-    if c == ':':
+-      break
+-    if c not in '0123456789':
+-      raise ValueError('Invalid netstring input')
+-    length += c
+-
+-  if len(length) == 16:
+-    raise ValueError('Invalid netstring input')
+-
+-  length = int(length)
+-  data = f.read(length)
+-  f.read(1)  # chomp ','
+-  return data
+-
+-def write(f, s):
+-  f.write('%d:' % len(s))
+-  f.write(s)
+-  f.write(',')

@@ -1,0 +1,377 @@
+diff -Nur djbdns-1.05.orig/cache.c djbdns-1.05/cache.c
+--- djbdns-1.05.orig/cache.c	2013-01-20 18:20:47.586041698 +0100
++++ djbdns-1.05/cache.c	2013-01-20 18:22:02.734040371 +0100
+@@ -82,9 +82,10 @@
+   return result;
+ }
+ 
+-char *cache_get(const char *key,unsigned int keylen,unsigned int *datalen,uint32 *ttl)
++char *cache_get(const char *key,unsigned int keylen,unsigned int *datalen,uint32 *ttl,int *flagns)
+ {
+   struct tai expire;
++  char expirestr[TAI_PACK];
+   struct tai now;
+   uint32 pos;
+   uint32 prevpos;
+@@ -92,6 +93,9 @@
+   uint32 u;
+   unsigned int loop;
+   double d;
++  int dummy;
++
++  if (!flagns) flagns=&dummy;
+ 
+   if (!x) return 0;
+   if (keylen > MAXKEYLEN) return 0;
+@@ -100,11 +104,16 @@
+   pos = get4(prevpos);
+   loop = 0;
+ 
++  *flagns = 0;
++
+   while (pos) {
+     if (get4(pos + 4) == keylen) {
+       if (pos + 20 + keylen > size) cache_impossible();
+       if (byte_equal(key,keylen,x + pos + 20)) {
+-        tai_unpack(x + pos + 12,&expire);
++        byte_copy(expirestr,TAI_PACK,x + pos + 12);
++        if (expirestr[0] & 0x80) *flagns = 1;
++        expirestr[0] &= 0x7f;
++        tai_unpack(expirestr,&expire);
+         tai_now(&now);
+         if (tai_less(&expire,&now)) return 0;
+ 
+@@ -134,10 +143,11 @@
+   return 0;
+ }
+ 
+-void cache_set(const char *key,unsigned int keylen,const char *data,unsigned int datalen,uint32 ttl)
++void cache_set(const char *key,unsigned int keylen,const char *data,unsigned int datalen,uint32 ttl,int flagns)
+ {
+   struct tai now;
+   struct tai expire;
++  char *expirestr;
+   unsigned int entrylen;
+   unsigned int keyhash;
+   uint32 pos;
+@@ -182,7 +192,11 @@
+   set4(writer,pos ^ keyhash);
+   set4(writer + 4,keylen);
+   set4(writer + 8,datalen);
+-  tai_pack(x + writer + 12,&expire);
++  expirestr = x + writer + 12;
++  tai_pack(expirestr,&expire);
++  expirestr[0] &= 0x7f;
++  if (flagns)
++    expirestr[0] += 0x80;
+   byte_copy(x + writer + 20,keylen,key);
+   byte_copy(x + writer + 20 + keylen,datalen,data);
+ 
+diff -Nur djbdns-1.05.orig/cache.h djbdns-1.05/cache.h
+--- djbdns-1.05.orig/cache.h	2013-01-20 18:20:47.586041698 +0100
++++ djbdns-1.05/cache.h	2013-01-20 18:22:02.734040371 +0100
+@@ -12,7 +12,7 @@
+ extern uint64 cache_miss;
+ 
+ extern int cache_init(unsigned int);
+-extern void cache_set(const char *,unsigned int,const char *,unsigned int,uint32);
+-extern char *cache_get(const char *,unsigned int,unsigned int *,uint32 *);
++extern void cache_set(const char *,unsigned int,const char *,unsigned int,uint32,int);
++extern char *cache_get(const char *,unsigned int,unsigned int *,uint32 *,int *);
+ 
+ #endif
+diff -Nur djbdns-1.05.orig/cachetest.c djbdns-1.05/cachetest.c
+--- djbdns-1.05.orig/cachetest.c	2001-02-11 22:11:45.000000000 +0100
++++ djbdns-1.05/cachetest.c	2013-01-20 18:22:02.738040367 +0100
+@@ -18,9 +18,9 @@
+   while (x = *argv++) {
+     i = str_chr(x,':');
+     if (x[i])
+-      cache_set(x,i,x + i + 1,str_len(x) - i - 1,86400);
++      cache_set(x,i,x + i + 1,str_len(x) - i - 1,86400,0);
+     else {
+-      y = cache_get(x,i,&u,&ttl);
++      y = cache_get(x,i,&u,&ttl,0);
+       if (y)
+         buffer_put(buffer_1,y,u);
+       buffer_puts(buffer_1,"\n");
+diff -Nur djbdns-1.05.orig/query.c djbdns-1.05/query.c
+--- djbdns-1.05.orig/query.c	2013-01-20 18:20:47.758041692 +0100
++++ djbdns-1.05/query.c	2013-01-20 18:25:14.458036956 +0100
+@@ -48,7 +48,7 @@
+   flagusetxtformat = 1;
+ }
+ 
+-static void cachegeneric(const char type[2],const char *d,const char *data,unsigned int datalen,uint32 ttl)
++static void cachegeneric(const char type[2],const char *d,const char *data,unsigned int datalen,uint32 ttl, int flagns)
+ {
+   unsigned int len;
+   char key[257];
+@@ -60,7 +60,7 @@
+   byte_copy(key + 2,len,d);
+   case_lowerb(key + 2,len);
+ 
+-  cache_set(key,len + 2,data,datalen,ttl);
++  cache_set(key,len + 2,data,datalen,ttl,flagns);
+ }
+ 
+ static char save_buf[8192];
+@@ -81,13 +81,12 @@
+   save_len += len;
+ }
+ 
+-static void save_finish(const char type[2],const char *d,uint32 ttl)
++static void save_finish(const char type[2],const char *d,uint32 ttl,int flagns)
+ {
+   if (!save_ok) return;
+-  cachegeneric(type,d,save_buf,save_len,ttl);
++  cachegeneric(type,d,save_buf,save_len,ttl,flagns);
+ }
+ 
+-
+ static int typematch(const char rtype[2],const char qtype[2])
+ {
+   return byte_equal(qtype,2,rtype) || byte_equal(qtype,2,DNS_T_ANY);
+@@ -252,6 +251,7 @@
+   int flagout;
+   int flagcname;
+   int flagreferral;
++  int flagns;
+   int flagsoa;
+   uint32 ttl;
+   uint32 soattl;
+@@ -308,14 +308,14 @@
+     byte_copy(key,2,DNS_T_ANY);
+     byte_copy(key + 2,dlen,d);
+     case_lowerb(key + 2,dlen);
+-    cached = cache_get(key,dlen + 2,&cachedlen,&ttl);
++    cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
+     if (cached) {
+       log_cachednxdomain(d);
+       goto NXDOMAIN;
+     }
+ 
+     byte_copy(key,2,DNS_T_CNAME);
+-    cached = cache_get(key,dlen + 2,&cachedlen,&ttl);
++    cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
+     if (cached) {
+       if (typematch(DNS_T_CNAME,dtype)) {
+         log_cachedanswer(d,DNS_T_CNAME);
+@@ -331,7 +331,7 @@
+ 
+     if (typematch(DNS_T_NS,dtype)) {
+       byte_copy(key,2,DNS_T_NS);
+-      cached = cache_get(key,dlen + 2,&cachedlen,&ttl);
++      cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
+       if (cached && (cachedlen || byte_diff(dtype,2,DNS_T_ANY))) {
+ 	log_cachedanswer(d,DNS_T_NS);
+ 	if (!rqa(z)) goto DIE;
+@@ -348,7 +348,7 @@
+ 
+     if (typematch(DNS_T_PTR,dtype)) {
+       byte_copy(key,2,DNS_T_PTR);
+-      cached = cache_get(key,dlen + 2,&cachedlen,&ttl);
++      cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
+       if (cached && (cachedlen || byte_diff(dtype,2,DNS_T_ANY))) {
+ 	log_cachedanswer(d,DNS_T_PTR);
+ 	if (!rqa(z)) goto DIE;
+@@ -365,7 +365,7 @@
+ 
+     if (typematch(DNS_T_MX,dtype)) {
+       byte_copy(key,2,DNS_T_MX);
+-      cached = cache_get(key,dlen + 2,&cachedlen,&ttl);
++      cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
+       if (cached && (cachedlen || byte_diff(dtype,2,DNS_T_ANY))) {
+ 	log_cachedanswer(d,DNS_T_MX);
+ 	if (!rqa(z)) goto DIE;
+@@ -385,7 +385,7 @@
+ 
+     if (typematch(DNS_T_A,dtype)) {
+       byte_copy(key,2,DNS_T_A);
+-      cached = cache_get(key,dlen + 2,&cachedlen,&ttl);
++      cached = cache_get(key,dlen + 2,&cachedlen,&ttl,&flagns);
+       if (cached && (cachedlen || byte_diff(dtype,2,DNS_T_ANY))) {
+ 	if (z->level) {
+           flaghaskey = findkey(d,pubkey);
+@@ -407,14 +407,28 @@
+ 	  cached += 4;
+ 	  cachedlen -= 4;
+ 	}
+-	cleanup(z);
+-	return 1;
++        if (!flagns){
++          cleanup(z);
++          return 1;
++        }
++        byte_copy(key,2,DNS_T_NS);
++        cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
++        if (cached && (cachedlen || byte_diff(dtype,2,DNS_T_ANY))) {
++          pos = 0;
++          while (pos = dns_packet_getname(cached,cachedlen,pos,&t2)) {
++            if (!response_rstart(d,DNS_T_NS,ttl)) goto DIE;
++            if (!response_addname(t2)) goto DIE;
++            response_rfinish(RESPONSE_AUTHORITY);
++          }
++          cleanup(z);
++          return 1;
++        }
+       }
+     }
+ 
+     if (!typematch(DNS_T_ANY,dtype) && !typematch(DNS_T_AXFR,dtype) && !typematch(DNS_T_CNAME,dtype) && !typematch(DNS_T_NS,dtype) && !typematch(DNS_T_PTR,dtype) && !typematch(DNS_T_A,dtype) && !typematch(DNS_T_MX,dtype)) {
+       byte_copy(key,2,dtype);
+-      cached = cache_get(key,dlen + 2,&cachedlen,&ttl);
++      cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
+       if (cached && (cachedlen || byte_diff(dtype,2,DNS_T_ANY))) {
+ 	log_cachedanswer(d,dtype);
+ 	if (!rqa(z)) goto DIE;
+@@ -449,7 +463,7 @@
+         byte_copy(key,2,DNS_T_NS);
+         byte_copy(key + 2,dlen,d);
+         case_lowerb(key + 2,dlen);
+-        cached = cache_get(key,dlen + 2,&cachedlen,&ttl);
++        cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
+         if (cached && cachedlen) {
+ 	  z->control[z->level] = d;
+           byte_zero(z->servers[z->level],64);
+@@ -497,13 +511,13 @@
+       if (byte_diff(z->servers[z->level] + j,4,"\0\0\0\0")) {
+         whichkey = z->keys[z->level] + 8 * j;
+         byte_copy(key + 2,32,whichkey);
+-        cached = cache_get(key,34,&cachedlen,&ttl);
++        cached = cache_get(key,34,&cachedlen,&ttl,0);
+         if (cached && (cachedlen == 32)) {
+           byte_copy(whichkey,32,cached);
+           continue;
+         }
+         crypto_box_beforenm((unsigned char *) whichkey,(const unsigned char *) whichkey,(const unsigned char *) secretkey);
+-        cache_set(key,34,whichkey,32,655360);
++        cache_set(key,34,whichkey,32,655360,0);
+       }
+   }
+ 
+@@ -548,6 +562,7 @@
+   flagout = 0;
+   flagcname = 0;
+   flagreferral = 0;
++  flagns = 0;
+   flagsoa = 0;
+   soattl = 0;
+   cnamettl = 0;
+@@ -582,6 +597,7 @@
+     }
+     else if (typematch(header,DNS_T_NS)) {
+       flagreferral = 1;
++      if (dns_domain_equal(t1,d)) flagns = 1;
+       if (!dns_domain_copy(&referral,t1)) goto DIE;
+     }
+ 
+@@ -674,7 +690,7 @@
+       pos = dns_packet_skipname(buf,len,records[j - 1]); if (!pos) goto DIE;
+       pos = dns_packet_getname(buf,len,pos + 10,&t2); if (!pos) goto DIE;
+       log_rrcname(whichserver,t1,t2,ttl);
+-      cachegeneric(DNS_T_CNAME,t1,t2,dns_domain_length(t2),ttl);
++      cachegeneric(DNS_T_CNAME,t1,t2,dns_domain_length(t2),ttl,0);
+     }
+     else if (byte_equal(type,2,DNS_T_PTR)) {
+       save_start();
+@@ -685,7 +701,7 @@
+         save_data(t2,dns_domain_length(t2));
+         ++i;
+       }
+-      save_finish(DNS_T_PTR,t1,ttl);
++      save_finish(DNS_T_PTR,t1,ttl,0);
+     }
+     else if (byte_equal(type,2,DNS_T_NS)) {
+       if (posauthority <= records[i]) {
+@@ -694,7 +710,7 @@
+         byte_copy(key,2,DNS_T_NS);
+         byte_copy(key + 2,dlen,t1);
+         case_lowerb(key + 2,dlen);
+-        if (cache_get(key,dlen + 2,&cachedlen,&cachedttl)) if (cachedttl < ttl) ttl = cachedttl;
++        if (cache_get(key,dlen + 2,&cachedlen,&cachedttl,0)) if (cachedttl < ttl) ttl = cachedttl;
+       }
+       save_start();
+       while (i < j) {
+@@ -704,7 +720,7 @@
+         save_data(t2,dns_domain_length(t2));
+         ++i;
+       }
+-      save_finish(DNS_T_NS,t1,ttl);
++      save_finish(DNS_T_NS,t1,ttl,0);
+     }
+     else if (byte_equal(type,2,DNS_T_MX)) {
+       save_start();
+@@ -717,7 +733,7 @@
+         save_data(t2,dns_domain_length(t2));
+         ++i;
+       }
+-      save_finish(DNS_T_MX,t1,ttl);
++      save_finish(DNS_T_MX,t1,ttl,0);
+     }
+     else if (byte_equal(type,2,DNS_T_A)) {
+       save_start();
+@@ -731,7 +747,7 @@
+         }
+         ++i;
+       }
+-      save_finish(DNS_T_A,t1,ttl);
++      save_finish(DNS_T_A,t1,ttl,flagns);
+     }
+     else {
+       save_start();
+@@ -745,7 +761,7 @@
+         log_rr(whichserver,t1,type,buf + pos,datalen,ttl);
+         ++i;
+       }
+-      save_finish(type,t1,ttl);
++      save_finish(type,t1,ttl,0);
+     }
+ 
+     i = j;
+@@ -773,7 +789,7 @@
+ 
+   if (rcode == 3) {
+     log_nxdomain(whichserver,d,soattl);
+-    cachegeneric(DNS_T_ANY,d,"",0,soattl);
++    cachegeneric(DNS_T_ANY,d,"",0,soattl,0);
+ 
+     NXDOMAIN:
+     if (z->level) goto LOWERLEVEL;
+@@ -788,7 +804,7 @@
+       if (byte_diff(DNS_T_AXFR,2,dtype))
+         if (byte_diff(DNS_T_CNAME,2,dtype)) {
+           save_start();
+-          save_finish(dtype,d,soattl);
++          save_finish(dtype,d,soattl,0);
+ 	  log_nodata(whichserver,d,dtype,soattl);
+         }
+ 
+@@ -853,10 +869,27 @@
+   
+             response_rfinish(RESPONSE_ANSWER);
+           }
++      pos += datalen;
++    }
+ 
++    pos = posauthority;
++    for (j = 0;j < numauthority;++j) {
++      pos = dns_packet_getname(buf,len,pos,&t1); if (!pos) goto DIE;
++      pos = dns_packet_copy(buf,len,pos,header,10); if (!pos) goto DIE;
++      ttl = ttlget(header + 4);
++      uint16_unpack_big(header + 8,&datalen);
++      if (dns_domain_equal(t1,d))
++        if (byte_equal(header + 2,2,DNS_C_IN)) /* should always be true */
++          if (typematch(header,DNS_T_NS)) {
++            if (!response_rstart(t1,header,ttl)) goto DIE;
++            if (!dns_packet_getname(buf,len,pos,&t2)) goto DIE;
++            if (!response_addname(t2)) goto DIE;
++            response_rfinish(RESPONSE_AUTHORITY);
++          }
+       pos += datalen;
+     }
+ 
++
+     cleanup(z);
+     return 1;
+   }

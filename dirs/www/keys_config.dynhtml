@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+# 20110927
+# Jan Mojzis
+# Public domain.
+
+import sys, cgi, os, lib, curvecp, dnscurve, check
+
+try:
+        #XXX - generate key before chroot
+        (pk, sk, nk) = curvecp.keygen()
+
+        lib.limit_resources2()
+        q = cgi.parse()
+
+        keytype = q['keytype'][0]
+        if keytype not in ["curvecp", "dnscurve"]:
+                raise ValueError("Sorry, only curvecp or dnscurve keytype allowed")
+
+        name = q['name'][0].strip()
+        check.name(name)
+
+        if keytype == "curvecp":
+                module = curvecp
+                fn = "%s/%s" % (lib.curvecp_keydir,name)
+        elif keytype == "dnscurve":
+                module = dnscurve
+                fn = "%s/%s" % (lib.dnscurve_keydir,name)
+                nk = nk[0:16] #XXX
+        else:
+                pass
+
+        submit = q['submit'][0]
+        if submit == "create":
+                module.makekey(pk, sk, nk, fn)
+
+        elif submit == "remove":
+                lib.recursiverrm(fn)
+        else:
+                raise ValueError("Unknown submit value")
+except:
+        lib.print_refresh_failed("%skeys" % (keytype))
+else:
+        lib.print_refresh_success("%skeys" % (keytype))
+

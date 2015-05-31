@@ -1,0 +1,32 @@
+httpproxy
+- extension for firefox
+- extension for safari
+- keepalive connection manager
+
+gpg
+- write simple gpg replacement for signature verification
+- redesign scripts gpg-download, gpg-remove, gpg-list, gpg-verify
+- remove hardcoded keyserver
+
+vpn (server side):
+- automatic IP selection for clients
+- replace PID-style locking
+- extra routes for clients 
+
+admin:
+- rewrite admin webserver to python and chroot webserver to /opt/curveprotect
+
+python:
+- precompile pyc files
+
+tools:
+- more test for fdcopy, jabberproxy
+
+dnscryptools:
+- more tests for dnscryptserver, dnscryptqr, dnscryptcache
+
+tests:
+iptostrtest ... more tests
+
+libs:
+- remove inet_pton !!!

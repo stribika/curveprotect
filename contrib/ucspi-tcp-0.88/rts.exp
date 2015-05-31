@@ -1,0 +1,435 @@
+--- tcpclient prints usage message without enough arguments
+tcpclient: usage: tcpclient [ -hHrRdDqQv ] [ -i localip ] [ -p localport ] [ -T timeoutconn ] [ -l localname ] [ -t timeoutinfo ] host port program
+100
+--- tcpclient prints error message with unknown port name
+tcpclient: fatal: unable to figure out port number for nonexistentport
+111
+--- tcpclient prints error message when connection fails
+tcpclient: unable to connect to 127.0.0.1 port 16: connection refused
+111
+--- tcpclient -q does not print error message when connection fails
+111
+--- tcpclient understands empty host name as synonym for 0
+tcpclient: unable to connect to 127.0.0.1 port 16: connection refused
+111
+--- tcpclient understands unbracketed IP address
+tcpclient: unable to connect to 127.0.0.1 port 16: connection refused
+111
+--- tcpclient understands bracketed IP address
+tcpclient: unable to connect to 127.0.0.1 port 16: connection refused
+111
+--- tcpclient prints error message with unknown host name
+tcpclient: fatal: no IP address for nonexistent.local.
+111
+--- tcpclient prints error message with unresolvable host name
+tcpclient: fatal: temporarily unable to figure out IP address for thislabelistoolongbecausednshasalimitof63charactersinasinglelabel.: protocol error
+111
+--- tcpserver prints usage message without enough arguments
+tcpserver: usage: tcpserver [ -1UXpPhHrRoOdDqQv ] [ -c limit ] [ -x rules.cdb ] [ -B banner ] [ -g gid ] [ -u uid ] [ -b backlog ] [ -l localname ] [ -t timeout ] host port program
+100
+--- tcpserver -u 1 attempts to set uid to 1
+tcpserver: fatal: unable to set uid: permission denied
+111
+--- tcpserver -U reads $UID
+tcpserver: fatal: unable to set uid: permission denied
+111
+--- tcpserver -g 2 attempts to set gid to 2
+tcpserver: fatal: unable to set gid: permission denied
+111
+--- tcpserver -U reads $GID
+tcpserver: fatal: unable to set gid: permission denied
+111
+--- tcpserver prints error message with unknown port name
+tcpserver: fatal: unable to figure out port number for nonexistentport
+111
+--- tcpserver prints error message with unknown host name
+tcpserver: fatal: no IP address for nonexistent.local.
+111
+--- tcpserver prints error message with unresolvable host name
+tcpserver: fatal: temporarily unable to figure out IP address for thislabelistoolongbecausednshasalimitof63charactersinasinglelabel.: protocol error
+111
+--- tcpserver prints error message with non-local host name
+tcpserver: fatal: unable to bind: address not available
+111
+--- tcpserver sets basic environment variables
+bannerPROTO=TCP
+TCPLOCALHOST=Local
+TCPLOCALIP=127.0.0.1
+TCPLOCALPORT=50016
+TCPREMOTEHOST=localhost
+TCPREMOTEIP=127.0.0.1
+TCPREMOTEPORT=50017
+TCPREMOTEINFO=unset
+0
+--- tcpclient recognizes -D, -i, -r, -h, -t
+bannerPROTO=TCP
+TCPLOCALHOST=Local
+TCPLOCALIP=127.0.0.1
+TCPLOCALPORT=50016
+TCPREMOTEHOST=localhost
+TCPREMOTEIP=127.0.0.1
+TCPREMOTEPORT=50018
+TCPREMOTEINFO=unset
+0
+--- tcpclient sets basic environment variables
+PROTO=TCP
+TCPLOCALHOST=Local
+TCPLOCALIP=127.0.0.1
+TCPLOCALPORT=50019
+TCPREMOTEHOST=unset
+TCPREMOTEIP=127.0.0.1
+TCPREMOTEPORT=50016
+TCPREMOTEINFO=unset
+0
+--- tcpclient looks up host names properly
+PROTO=TCP
+TCPLOCALHOST=localhost
+TCPLOCALIP=127.0.0.1
+TCPLOCALPORT=50020
+TCPREMOTEHOST=localhost
+TCPREMOTEIP=127.0.0.1
+TCPREMOTEPORT=50016
+TCPREMOTEINFO=unset
+0
+--- tcpclient -v works
+tcpclient: connected to 127.0.0.1 port 50016
+ok
+0
+--- tcpserver prints error message with used port
+tcpserver: fatal: unable to bind: address already used
+111
+--- tcpcat works
+bannerPROTO=TCP
+TCPLOCALHOST=Local
+TCPLOCALIP=127.0.0.1
+TCPLOCALPORT=50016
+TCPREMOTEHOST=localhost
+TCPREMOTEIP=127.0.0.1
+TCPREMOTEINFO=unset
+0
+--- mconnect works
+bannerPROTO=TCP
+TCPLOCALHOST=Local
+TCPLOCALIP=127.0.0.1
+TCPLOCALPORT=50016
+TCPREMOTEHOST=localhost
+TCPREMOTEIP=127.0.0.1
+TCPREMOTEINFO=unset
+0
+--- tcprules prints usage message without enough arguments
+tcprules: usage: tcprules rules.cdb rules.tmp
+100
+--- tcprules prints error message if it cannot create tmp
+tcprules: fatal: unable to create /dev/nonexistent/tmp: file does not exist
+111
+--- tcprules prints error message if it cannot move tmp to cdb
+tcprules: fatal: unable to move test.tmp to /dev/nonexistent/cdb: file does not exist
+111
+--- tcprules creates a cdb file
+0
+--- tcprulescheck sees deny
+rule 1.2.3.4:
+deny connection
+0
+--- tcprulescheck does not apply deny to another host
+default:
+allow connection
+0
+--- tcprules replaces a cdb file
+0
+--- tcprulescheck finds rule with address and info
+rule joe@127.0.0.1:
+set environment variable which=first
+allow connection
+0
+--- tcprulescheck finds rule with address
+rule 18.23.0.32:
+set environment variable which=second
+allow connection
+0
+--- tcprulescheck finds one-dot wildcard
+rule 127.:
+set environment variable which=third
+allow connection
+0
+--- tcprulescheck finds zero-dot wildcard
+rule :
+set environment variable which=fourth
+allow connection
+0
+--- tcprules handles comments, address ranges, multiple variables
+0
+rule 127.0.:
+set environment variable which=first
+set environment variable where=whatever
+allow connection
+rule 127.1.:
+set environment variable which=first
+set environment variable where=whatever
+allow connection
+rule 127.2.:
+set environment variable which=first
+set environment variable where=whatever
+allow connection
+rule 127.3.:
+set environment variable which=first
+set environment variable where=whatever
+allow connection
+rule 127.4.:
+set environment variable which=first
+set environment variable where=whatever
+allow connection
+rule 127.5.:
+set environment variable which=first
+set environment variable where=whatever
+allow connection
+default:
+allow connection
+default:
+allow connection
+default:
+allow connection
+default:
+allow connection
+default:
+allow connection
+--- tcprules handles host names
+0
+rule =known.edu:
+set environment variable which=known
+allow connection
+rule :
+set environment variable which=anybody
+allow connection
+rule :
+set environment variable which=anybody
+allow connection
+rule =.abuser.edu:
+deny connection
+rule =.abuser.edu:
+deny connection
+--- tcprulescheck searches for rules in the proper order
+0
+rule xyz@86.75.30.9:
+set environment variable which=first
+allow connection
+rule xyz@86.75.30.9:
+set environment variable which=first
+allow connection
+rule xyz@=one.two.three:
+set environment variable which=second
+allow connection
+rule 86.75.30.9:
+set environment variable which=third
+allow connection
+rule 86.75.30.9:
+set environment variable which=third
+allow connection
+rule 86.75.30.9:
+set environment variable which=third
+allow connection
+rule 86.75.30.9:
+set environment variable which=third
+allow connection
+rule =one.two.three:
+set environment variable which=fourth
+allow connection
+rule =one.two.three:
+set environment variable which=fourth
+allow connection
+rule 86.75.30.:
+set environment variable which=fifth
+allow connection
+rule 86.75.30.:
+set environment variable which=fifth
+allow connection
+rule 86.75.:
+set environment variable which=sixth
+allow connection
+rule 86.75.:
+set environment variable which=sixth
+allow connection
+rule 86.75.:
+set environment variable which=sixth
+allow connection
+rule 86.75.:
+set environment variable which=sixth
+allow connection
+rule 86.:
+set environment variable which=seventh
+allow connection
+rule 86.:
+set environment variable which=seventh
+allow connection
+rule 86.:
+set environment variable which=seventh
+allow connection
+rule 86.:
+set environment variable which=seventh
+allow connection
+rule =.two.three:
+set environment variable which=eighth
+allow connection
+rule =.two.three:
+set environment variable which=eighth
+allow connection
+rule =.three:
+set environment variable which=ninth
+allow connection
+rule =.three:
+set environment variable which=ninth
+allow connection
+rule =:
+set environment variable which=tenth
+allow connection
+rule =:
+set environment variable which=tenth
+allow connection
+rule :
+set environment variable which=eleventh
+allow connection
+rule :
+set environment variable which=eleventh
+allow connection
+--- addcr leaves an empty file alone
+0
+--- addcr leaves a partial final line alone
+test0
+--- addcr adds CR after the first line
+test^M
+0
+--- addcr adds CR after the second line
+test^M
+test2^M
+0
+--- addcr handles nulls
+t^@st^M
+0
+--- delcr leaves an empty file alone
+0
+--- delcr leaves a non-CR line alone
+test
+0
+--- delcr removes CR if a line has it
+test
+0
+--- delcr converts CR CR LF to CR LF
+test^M
+0
+--- delcr does not remove CR from a partial final line
+test^M0
+--- delcr handles a non-CR partial final line
+test0
+--- delcr handles nulls
+t^@st
+0
+--- fixcrio works
+^M
+hi^M
+there^M
+bye^M
+--- recordio works
+... < test $
+... > test $
+... < [EOF]$
+... > [EOF]$
+--- recordio handles multiple-line packets
+... < test $
+... < test2 $
+... > test $
+... > test2 $
+... < [EOF]$
+... > [EOF]$
+--- recordio handles partial final lines
+... < test+$
+... > test+$
+... < [EOF]$
+... > [EOF]$
+--- argv0 works
+zero
+0
+--- argv0 requires arguments
+argv0: usage: argv0 realname program [ arg ... ]
+100
+--- rblsmtpd does not find 127.0.0.1 on the RBL
+ok
+0
+--- rblsmtpd finds 127.0.0.2 on the RBL
+rblsmtpd: 127.0.0.2 pid x: 451 Blackholed - see <URL:http://mail-abuse.org/cgi-bin/lookup?127.0.0.2>
+220 rblsmtpd.local^M
+451 Blackholed - see <URL:http://mail-abuse.org/cgi-bin/lookup?127.0.0.2>^M
+221 rblsmtpd.local^M
+0
+--- rblsmtpd -b uses a permanent error code
+rblsmtpd: 127.0.0.2 pid x: 553 Blackholed - see <URL:http://mail-abuse.org/cgi-bin/lookup?127.0.0.2>
+220 rblsmtpd.local^M
+553 Blackholed - see <URL:http://mail-abuse.org/cgi-bin/lookup?127.0.0.2>^M
+221 rblsmtpd.local^M
+0
+--- rblsmtpd quits after a timeout
+rblsmtpd: 127.0.0.2 pid x: 451 Blackholed - see <URL:http://mail-abuse.org/cgi-bin/lookup?127.0.0.2>
+220 rblsmtpd.local^M
+0
+--- rblsmtpd prints an immediate error message with -t0
+rblsmtpd: 127.0.0.2 pid x: 451 Blackholed - see <URL:http://mail-abuse.org/cgi-bin/lookup?127.0.0.2>
+451 Blackholed - see <URL:http://mail-abuse.org/cgi-bin/lookup?127.0.0.2>^M
+0
+--- rblsmtpd understands an empty $RBLSMTPD
+ok
+0
+--- rblsmtpd understands a nonempty $RBLSMTPD
+rblsmtpd: 127.0.0.2 pid x: 451 Error
+220 rblsmtpd.local^M
+451 Error^M
+221 rblsmtpd.local^M
+0
+--- rblsmtpd understands a permanent $RBLSMTPD
+rblsmtpd: 127.0.0.2 pid x: 553 Error
+220 rblsmtpd.local^M
+553 Error^M
+221 rblsmtpd.local^M
+0
+--- rblsmtpd understands -r
+ok
+0
+--- rblsmtpd understands -a
+ok
+0
+--- tcpserver -1v prints proper messages
+50016
+tcpserver: status: 0/2
+tcpserver: status: 1/2
+tcpserver: pid x from 127.0.0.1
+tcpserver: ok x Local:127.0.0.1:50016 localhost:127.0.0.1::x
+tcpserver: end x status 0
+tcpserver: status: 0/2
+tcpserver: status: 1/2
+tcpserver: pid x from 127.0.0.1
+tcpserver: ok x Local:127.0.0.1:50016 localhost:127.0.0.1::x
+tcpserver: end x status 0
+tcpserver: status: 0/2
+tcpserver: status: 1/2
+tcpserver: pid x from 127.0.0.1
+tcpserver: ok x Local:127.0.0.1:50016 localhost:127.0.0.1::x
+tcpserver: end x status 0
+tcpserver: status: 0/2
+tcpserver: status: 1/2
+tcpserver: pid x from 127.0.0.1
+tcpserver: ok x Local:127.0.0.1:50016 localhost:127.0.0.1::x
+tcpserver: end x status 0
+tcpserver: status: 0/2
+tcpserver: status: 1/2
+tcpserver: pid x from 127.0.0.1
+tcpserver: ok x Local:127.0.0.1:50016 localhost:127.0.0.1::x
+tcpserver: end x status 0
+tcpserver: status: 0/2
+tcpserver: status: 1/2
+tcpserver: pid x from 127.0.0.1
+tcpserver: ok x Local:127.0.0.1:50016 localhost:127.0.0.1::x
+tcpserver: end x status 0
+tcpserver: status: 0/2
+tcpserver: status: 1/2
+tcpserver: pid x from 127.0.0.1
+tcpserver: ok x Local:127.0.0.1:50016 localhost:127.0.0.1::x
+tcpserver: end x status 0
+tcpserver: status: 0/2

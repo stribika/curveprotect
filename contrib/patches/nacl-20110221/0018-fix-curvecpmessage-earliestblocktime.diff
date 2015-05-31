@@ -1,0 +1,25 @@
+diff -Nur nacl-20110221.orig/curvecp/curvecpmessage.c nacl-20110221/curvecp/curvecpmessage.c
+--- nacl-20110221.orig/curvecp/curvecpmessage.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221/curvecp/curvecpmessage.c	2013-01-27 16:22:49.422056876 +0100
+@@ -285,15 +285,15 @@
+ 
+     nextaction = recent + 60000000000LL;
+     if (wantping == 1) nextaction = recent + 1000000000;
+-    if (wantping == 2)
+-      if (nextaction > lastblocktime + nsecperblock) nextaction = lastblocktime + nsecperblock;
++    if (wantping == 2) nextaction = 0;
+     if (blocknum < OUTGOING)
+       if (!(sendeof ? sendeofprocessed : sendprocessed >= sendbytes))
+         if (nextaction > lastblocktime + nsecperblock) nextaction = lastblocktime + nsecperblock;
+-    if (earliestblocktime)
+-      if (earliestblocktime + rtt_timeout > lastblocktime + nsecperblock)
+-        if (earliestblocktime + rtt_timeout < nextaction)
+-	  nextaction = earliestblocktime + rtt_timeout;
++    if (earliestblocktime) {
++      long long nextretry = earliestblocktime + rtt_timeout;
++      if (nextretry < lastblocktime + nsecperblock) nextretry = lastblocktime + nsecperblock;
++      if (nextretry < nextaction) nextaction = nextretry;
++    }
+ 
+     if (messagenum)
+       if (!watchtochild)

@@ -1,0 +1,32 @@
+pre {
+  margin: 0 0 10px 0;
+  margin: 0px 4px 10px 4px;
+}
+
+div.name {
+  float: left;
+  width: 200px;
+  margin: 4px 4px 4px 4px;
+  text-align:left;
+}
+
+div.value1 {
+  float: left;
+  width: 50px;
+  margin: 4px 4px 4px 4px;
+  text-align:right;
+}
+
+div.value2 {
+  float: left;
+  width: 50px;
+  margin: 4px 4px 4px 4px;
+  text-align:right;
+}
+
+div.separator {
+  float: left;
+  height: 10px;
+  width: 100%;
+}
+

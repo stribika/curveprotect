@@ -1,0 +1,113 @@
+From 7ab631dd08419f2ce9ea61b941f26db65b622494 Mon Sep 17 00:00:00 2001
+From: Matthew Dempsky <matthew@dempsky.org>
+Date: Mon, 2 Mar 2009 04:46:05 +0000
+Subject: [PATCH 2/2] djbdns misformats some long response packets; patch and example attack
+
+The DNS protocol restricts name compression to point into the first
+16384 bytes of a packet.  Line 18 of response.c from djbdns 1.05
+directly references this, but response_addname() in the same file does
+not enforce this at all.  The consequence of this is that names in
+very large DNS packets may be mangled, and clients may misparse the
+packet.
+
+Because this email is somewhat long, I'll state up front you can find
+a patch for this issue at the bottom of this email or at:
+    http://shinobi.dempsky.org/~matthew/djbdns-bug/patch
+
+To help demonstrate this bug, I've constructed an example attack.  In
+this scenario, there's a .foo TLD operated using tinydns and axfrdns
+(to support DNS queries over TCP; AXFR support is not required).  The
+attacker has registered x.foo and is allowed to upload NS records for
+x.foo and A records for names within the x.foo domain.  However,
+because of the aforementioned bug, this attacker can construct a
+record set that causes the .foo servers to respond to queries asking
+about names within the x.foo domain with poisonous records for names
+outside of x.foo.
+
+Using tinydns-data and tinydns-get from stock djbdns 1.05, you can
+reproduce this as follows:
+
+    $ curl -O http://shinobi.dempsky.org/~matthew/djbdns-bug/data
+    $ grep -c -v -e '&x\.foo::' -e '^+[^:]*\.x\.foo:' data
+    0
+    $ tinydns-data
+    $ tinydns-get a www.x.foo | grep ': foo '
+    additional: foo 8388608 NS a.ns.bar
+    additional: foo 8388608 NS b.ns.bar
+
+(With the patch I linked above, no records outside of x.foo will be
+served.  It's also worth noting the printpacket_cat() routine
+tinydns-get uses for pretty printing the response packet is much
+stricter about parsing than dnscache's parser is; e.g., it rejects
+packets with extra trailing bytes and records with bad rdlength fields
+on known record types.)
+
+If a victim using dnscache now makes an A query for www.x.foo,
+dnscache will save the poisoned records, and begin contacting the
+attacker's nameservers for all .foo requests.  (The response will be
+over 512 bytes long, so dnscache will have to retry the query over
+TCP, which is why axfrdns is necessary too.)
+
+Now, admittedly if you peek at data, you'll see the supplied records
+exceed what most TLDs probably allow: there are redundant NS records,
+there are very long names (but still within the allowed limits of the
+DNS protocol), names use non-printable characters, there are over 100
+records totalling about 24K of storage.  However, neither the djbdns
+documentation nor standard practice warn potential .foo administrators
+that their domain will be at risk for poisoning if they were to add
+support for glue record sets.  (Standard practice only warns that such
+absurd records can negatively impact x.foo, not .foo as well.)
+
+A perhaps more reasonable scenario is that the .foo servers fetch the
+contents of the x.foo domain over AXFR (removing any records from
+outside of x.foo) and then serve the records themselves.  axfr-get,
+the AXFR client from djbdns, would handle the above data set fine.
+
+In looking for a real life example of this latter scenario, I found
+freedns.afraid.org.  They allowed me to register burlap.afraid.org and
+set it up as an AXFR slave to my personal server.  I have not explored
+what limits they place on imported records, and their website states
+they're using BIND, but assuming they're not too limiting and were to
+instead use tinydns/axfrdns/axfr-get, it would be possible for me to
+trick any dnscache that queries for www.burlap.afraid.org into
+contacting another set of nameservers for all of afraid.org's DNS
+traffic.
+
+There's a similar service everydns.net.  They do claim to use tinydns
+(and so I assume axfrdns and axfr-get) and also provide AXFR slave
+support, but they did not allow me to register burlap.everydns.net.
+If they did, it would probably be possible to similarly poison
+everydns.net.
+
+I've tried to search for previous reports of this issue more
+thoroughly than the last bug I mentioned to the list, and I haven't
+found any mention of it yet.  I emailed Dan earlier today when I first
+began to suspect this bug was 'exploitable' to clarify his definition
+of a 'security hole' in djbdns.  I think the afraid.org example is a
+reasonable use case where this bug would violate afraid.org's security
+constraints if they were to instead use djbdns.
+
+Any thoughts from the list on this bug?  (Except from Dean Anderson;
+I'm sure he'll spend the next 3 weeks now arguing I'm a blackhat
+hacker while refusing to look at the patch or sample data file because
+my web server might hack his computer.)
+---
+ response.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/response.c b/response.c
+index ba90c89..33b2fb1 100644
+--- a/response.c
++++ b/response.c
+@@ -34,7 +34,7 @@ int response_addname(const char *d)
+         uint16_pack_big(buf,49152 + name_ptr[i]);
+         return response_addbytes(buf,2);
+       }
+-    if (dlen <= 128)
++    if ((dlen <= 128) && (response_len < 16384))
+       if (name_num < NAMES) {
+ 	byte_copy(name[name_num],dlen,d);
+ 	name_ptr[name_num] = response_len;
+-- 
+1.6.1.3
+

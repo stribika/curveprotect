@@ -1,0 +1,33 @@
+#!/bin/sh -e
+
+#20120729
+#Jan Mojzis
+#Public domain.
+
+[ -f do-debian ] || (echo "file do-debian not found"; exit 111;)
+[ -f conf-home ] || (echo "file conf-home not found"; exit 111;)
+[ -f conf-version ] || (echo "file conf-version not found"; exit 111;)
+which dpkg-buildpackage 1>/dev/null 2>/dev/null || (echo "program dpkg-buildpackage not found"; exit 111;)
+
+#build curveprotect
+./do
+
+#XXX
+#cp debian/changelog debian/changelog.bk
+#trap "{ [ -f debian/changelog.bk ] && mv debian/changelog.bk debian/changelog; exit;}" EXIT TERM HUP INT
+
+version=`head -1 conf-version`
+date=`date -R`
+
+(
+  echo "curveprotect (${version}) unstable; urgency=low"
+  echo ""
+  echo "  * automatic build"
+  echo ""
+  echo " -- Jan Mojzis <jan.mojzis@gmail.com>  ${date}"
+) > debian/changelog
+
+dpkg-buildpackage -b -us -uc
+
+#XXX
+rm -f ../curveprotect_${version}_*.changes 

@@ -1,0 +1,71 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE=1
+
+%:
+	dh $@
+binary:
+	dh_testdir do conf-home conf-ip conf-users conf-version
+	#dh_auto_configure
+	#dh_auto_build
+	#dh_auto_test
+	dh_testroot
+	dh_prep
+	#dh_installdirs
+	#dh_auto_install
+	./do installbin debian/curveprotect-bin/
+	./do installbin debian/curveprotect/
+	./do installrest debian/curveprotect/
+	#dh_install
+	dh_installdocs
+	dh_installchangelogs
+	#dh_installexamples
+	#dh_installman
+	#dh_installcatalogs
+	#dh_installcron
+	dh_installdebconf
+	#dh_installemacsen
+	#dh_installifupdown
+	#dh_installinfo
+	dh_pysupport
+	#dh_installinit
+	#dh_installmenu
+	#dh_installmime
+	#dh_installmodules
+	#dh_installlogcheck
+	#dh_installlogrotate
+	#dh_installpam
+	#dh_installppp
+	#dh_installudev
+	#dh_installwm
+	#dh_installxfonts
+	#dh_bugfiles
+	#dh_lintian
+	#dh_gconf
+	#dh_icons
+	#dh_perl
+	#dh_usrlocal
+	#dh_link
+	dh_compress
+	dh_fixperms
+	dh_strip
+	dh_makeshlibs
+	dh_shlibdeps
+	( echo "CURVEPROTECTHOME=`head -1 conf-home`"; echo "export CURVEPROTECTHOME"; )> debian/curveprotect.postinst.debhelper
+	( echo "CURVEPROTECTHOME=`head -1 conf-home`"; echo "export CURVEPROTECTHOME"; )> debian/curveprotect.postrm.debhelper
+	( echo "CURVEPROTECTHOME=`head -1 conf-home`"; echo "export CURVEPROTECTHOME"; )> debian/curveprotect.prerm.debhelper
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	#dh_builddeb
+	dpkg-deb --build debian/curveprotect build
+	dpkg-deb --build debian/curveprotect-bin build
+
+
+clean:
+	#./do clean
+	rm -rf debian/curveprotect debian/curveprotect-bin
+	rm -f debian/*.substvars debian/*.debhelper debian/*.log debian/files
+
+build:
+	./do

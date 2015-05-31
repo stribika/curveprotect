@@ -1,0 +1,21 @@
+diff -Nur djbdns1/response.c djbdns2/response.c
+--- djbdns1/response.c	2011-11-30 06:57:45.951211466 +0100
++++ djbdns2/response.c	2012-01-16 07:41:43.342361598 +0100
+@@ -8,7 +8,7 @@
+ static unsigned int tctarget;
+ 
+ #define NAMES 100
+-static char name[NAMES][128];
++static char name[NAMES][255];
+ static unsigned int name_ptr[NAMES]; /* each < 16384 */
+ static unsigned int name_num;
+ 
+@@ -34,7 +34,7 @@
+         uint16_pack_big(buf,49152 + name_ptr[i]);
+         return response_addbytes(buf,2);
+       }
+-    if ((dlen <= 128) && (response_len < 16384))
++    if ((dlen <= 255) && (response_len < 16384))
+       if (name_num < NAMES) {
+ 	byte_copy(name[name_num],dlen,d);
+ 	name_ptr[name_num] = response_len;

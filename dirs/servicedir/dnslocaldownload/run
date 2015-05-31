@@ -1,0 +1,19 @@
+#!/bin/sh
+exec 2>&1
+PATH="_CURVEPROTECT_/bin:$PATH"
+export PATH
+
+case "`uname -s | tr '/:[A-Z]' '..[a-z]'`" in \
+  linux) USER="root"  ;; 
+  *) USER="_CPUSR_" ;;
+esac
+export USER
+
+exec envuidgid "${USER}" softlimit -f10000000 -a1000000000 -o100 envdir _CURVEPROTECT_/etc/dnslocal/env sh -c '
+  [ -f "$CFGDIR/.rygplfawtlapigzsgdy" ] || exit 111 #XXX $CFGDIR protection
+  [ -f "$VARDIR/.rygplfawtlapigzsgdy" ] || exit 111 #XXX $VARDIR protection
+  uidgidchown -R "$VARDIR"
+  uidgidchown "$CFGDIR/lock"
+  dnszonecleanup "$CFGDIR" "$VARDIR"
+  exec setuidgid "${USER}" dnszonedownload "$CFGDIR" "$VARDIR"
+'

@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+# 20110927
+# Jan Mojzis
+# Public domain.
+
+
+import cgi, lib, config
+
+try:
+        lib.limit_resources()
+        q = cgi.parse()
+
+        if q['submit'][0] == "clean cache":
+                controlfn = "%s/dnscache/supervise/control" % (config.servicedir)
+                lib.openwriteclose(controlfn,"i")
+        else:
+                # CACHESIZE
+                try:
+                        cachesize = int(q['cachesize'][0].strip())
+                        if cachesize < 1000000 or cachesize > 1000000000:
+                                raise ValueError("cachesize must be in range 1000000 - 1000000000")
+
+                except (KeyError):
+                        pass
+                else:
+                        cachesizefn="etc/dnscache/env/CACHESIZE"
+                        datalimitfn="etc/dnscache/env/DATALIMIT"
+                        cachesizeenv = int(lib.openreadcloseescape(cachesizefn))
+                        if cachesize != cachesizeenv:
+                                datalimit = int(1.03*cachesize + 10000000)
+                                lib.openwritecloserename(cachesizefn,str(cachesize),"etc")
+                                lib.openwritecloserename(datalimitfn,str(datalimit),"etc")
+                        
+                # DNSCurve
+                try:
+                        x = q['dnscurve'][0]
+                except (KeyError):
+                        pass
+                else:
+                        dnscurvetypefn="etc/dnscache/env/DNSCURVETYPE"
+                        if x == "streamlined":
+                                lib.openwritecloserename(dnscurvetypefn,"1","etc") 
+                        elif x == "txt":
+                                lib.openwritecloserename(dnscurvetypefn,"2","etc")
+                        else:
+				#mixed (default)
+                                lib.openwritecloserename(dnscurvetypefn,"3","etc")
+
+                # ipsend
+                try:
+                        ipsend = q['ipsend'][0].strip()
+                        lib.ip4check(ipsend)
+                except (KeyError):
+                        pass
+                else:
+                        ipsendenvfn="etc/dnscache/env/IPSEND"
+                        lib.openwritecloserename(ipsendenvfn,str(ipsend),"etc")
+
+                # keydir
+                try:
+                        keydir="/%s/%s/%s" % (lib.basedir, lib.dnscurve_keydir, q['keydir'][0])
+                except:
+                        keydir=""
+
+                fn="etc/dnscache/env/KEYDIR"
+                if keydir == "":
+                        lib.tryunlink(fn)
+                else:
+                        lib.openwritecloserename(fn, keydir,"etc")
+
+                controlfn = "%s/dnscache/supervise/control" % (config.servicedir)
+                lib.openwriteclose(controlfn,"t")
+
+except:
+        lib.print_refresh_failed("dns")
+else:
+        lib.print_refresh_success("dns")

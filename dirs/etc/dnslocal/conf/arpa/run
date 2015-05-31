@@ -1,0 +1,32 @@
+#!/bin/sh -e
+
+if [ "x${TMPDIR}" = x ]; then
+  exit 111
+fi
+
+if [ "x${ZONE}" = x ]; then
+  exit 111
+fi
+
+if [ "x${ZONE}" = "x." ]; then
+  F=root.zone.gz
+  ORIGIN="."
+else
+  F="${ZONE}.zone.gz"
+  ORIGIN="${ZONE}."
+fi
+
+export F
+export ORIGIN
+
+DNSCACHEIP=`shuffleargs _OPENRESOVERS_`; export DNSCACHEIP
+netclient -vu www.internic.net 80 http-get "http://www.internic.net/domain/${F}" "${TMPDIR}/file.gz" "${TMPDIR}/file.tmp" || exit 111
+netclient -vu www.internic.net 80 http-get "http://www.internic.net/domain/${F}.sig" "${TMPDIR}/file.sig" "${TMPDIR}/file.sig.tmp" || exit 111
+
+gpg-verify "${TMPDIR}/file.sig" "${TMPDIR}/file.gz"
+
+gunzip <"${TMPDIR}/file.gz" > "${TMPDIR}/file.tmp"
+fsyncfile "${TMPDIR}/file.tmp"
+mv -f "${TMPDIR}/file.tmp" "${TMPDIR}/file" 
+
+bindparser "${TMPDIR}/file"

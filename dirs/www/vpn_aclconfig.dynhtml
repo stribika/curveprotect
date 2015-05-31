@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+# 20111108
+# Jan Mojzis
+# Public domain.
+
+import  cgi, os, lib, check, errno
+
+try:
+        lib.limit_resources()
+        q = cgi.parse()
+
+        try:
+                name = q['name'][0]
+                check.name(name)
+                if name[0:3] != "vpn":
+                        raise ValueError("x")
+                dummy=int(name[4:])
+        except:
+                raise
+
+        xtype = q['type'][0].lower()
+
+        if xtype not in ["ip", "route"]:
+                raise ValueError("Sorry, only 'ip' and 'route' type allowed")
+
+        action = q['submit'][0]
+
+        try:
+                x = q['net'][0].split('/')
+                if len(x) == 1:
+                        net = x[0]
+                        mask = "32"
+                elif len(x) == 2:
+                        net = x[0]
+                        mask = x[1]
+                else:
+                        raise
+                check.ip4(net)
+                if int(mask) > 32 or int(mask) < 0:
+                        raise
+        except:
+                raise ValueError("Sorry, format is NET/MASK, example 192.168.0.0/16")
+
+
+        fn = "etc/%s/root/%s/%s.%s" % (name, xtype, net, mask)
+        dr  = "etc/%s/root/%s" % (name, xtype)
+
+        if action == "remove":
+                os.unlink(fn)
+                lib.tryrmdir(dr)
+
+        elif action == "add":
+                lib.trymkdir(dr)
+                lib.openwritecloserename(fn,"","etc")
+        else:
+                raise ValueError("Unknown submit value")
+
+
+except:
+        lib.print_refresh_failed("vpn")
+else:
+        lib.print_refresh("/vpn.dynhtml?%s" % name)
+

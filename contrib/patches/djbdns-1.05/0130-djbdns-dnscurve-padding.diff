@@ -1,0 +1,42 @@
+diff -Nur djbdns-1.05.orig/dns_transmit.c djbdns-1.05/dns_transmit.c
+--- djbdns-1.05.orig/dns_transmit.c	2013-04-21 10:01:24.337946234 +0200
++++ djbdns-1.05/dns_transmit.c	2013-05-19 06:47:52.984876471 +0200
+@@ -20,6 +20,10 @@
+ error!
+ #endif
+ 
++static unsigned int padding(unsigned int len) {
++  return 128 - (len + 16) % 64;
++}
++
+ 
+ static void makebasequery(struct dns_transmit *d,char *query)
+ {
+@@ -50,6 +54,7 @@
+   }
+ 
+   len = dns_domain_length(d->name);
++  if (!d->suffix) len += padding(len);
+ 
+   byte_copy(nonce,12,d->nonce);
+   byte_zero(nonce + 12,12);
+@@ -358,7 +363,7 @@
+   if (!keys)
+     d->querylen = len + 18;
+   else if (!suffix)
+-    d->querylen = len + 86;
++    d->querylen = len + 86 + padding(len);
+   else {
+     suffixlen = dns_domain_length(suffix);
+     m = base32_bytessize(len + 44);
+@@ -367,6 +372,10 @@
+ 
+   d->query = alloc(d->querylen);
+   if (!d->query) return -1;
++  if (keys && !suffix) {
++    byte_zero(d->query, d->querylen);
++    d->query[len + padding(len) + 47] = 0x80; /* DNSCrypt compatibility */
++  }
+ 
+   d->name = q;
+   byte_copy(d->qtype,2,qtype);

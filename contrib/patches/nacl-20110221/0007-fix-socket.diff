@@ -1,0 +1,11 @@
+diff -Nur nacl-20110221.orig/curvecp/socket_bind.c nacl-20110221/curvecp/socket_bind.c
+--- nacl-20110221.orig/curvecp/socket_bind.c	2012-06-27 16:48:27.877207880 +0200
++++ nacl-20110221/curvecp/socket_bind.c	2012-06-27 16:50:10.393710544 +0200
+@@ -9,6 +9,7 @@
+ {
+   struct sockaddr_in sa;
+   byte_zero(&sa,sizeof sa);
++  sa.sin_family = PF_INET;
+   byte_copy(&sa.sin_addr,4,ip);
+   byte_copy(&sa.sin_port,2,port);
+   return bind(fd,(struct sockaddr *) &sa,sizeof sa);

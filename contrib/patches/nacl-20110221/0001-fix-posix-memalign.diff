@@ -1,0 +1,75 @@
+diff -Nur nacl-20110221.orig/commandline/nacl-sha256.c nacl-20110221/commandline/nacl-sha256.c
+--- nacl-20110221.orig/commandline/nacl-sha256.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221/commandline/nacl-sha256.c	2011-04-22 10:28:18.394487124 +0200
+@@ -13,6 +13,33 @@
+ #include <stdio.h>
+ #include "crypto_hash_sha256.h"
+ 
++#ifndef HAVE_POSIX_MEMALIGN
++#include <errno.h>
++
++int posix_memalign(void **mp, size_t alignment, size_t size){
++
++  if (alignment % sizeof(void *)){
++    errno = EINVAL;
++    return errno;
++  }
++
++  if (size > 1073741823){
++    errno = ENOMEM;
++    *mp = 0;
++    return errno;
++  }
++
++  size = alignment + size - (size & (alignment - 1));
++  *mp = malloc(size);
++  if (!*mp){
++      errno = ENOMEM;
++      return errno;
++  }
++  return 0;
++}
++#endif
++
++
+ unsigned char *input;
+ unsigned long long inputalloc;
+ unsigned long long inputlen;
+diff -Nur nacl-20110221.orig/commandline/nacl-sha512.c nacl-20110221/commandline/nacl-sha512.c
+--- nacl-20110221.orig/commandline/nacl-sha512.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221/commandline/nacl-sha512.c	2011-04-22 10:29:37.579501428 +0200
+@@ -13,6 +13,34 @@
+ #include <stdio.h>
+ #include "crypto_hash_sha512.h"
+ 
++
++#ifndef HAVE_POSIX_MEMALIGN
++#include <errno.h>
++
++int posix_memalign(void **mp, size_t alignment, size_t size){
++
++  if (alignment % sizeof(void *)){
++    errno = EINVAL;
++    return errno;
++  }
++
++  if (size > 1073741823){
++    errno = ENOMEM;
++    *mp = 0;
++    return errno;
++  }
++
++  size = alignment + size - (size & (alignment - 1));
++  *mp = malloc(size);
++  if (!*mp){
++    errno = ENOMEM;
++    return errno;
++  }
++  return 0;
++}
++#endif
++
++
+ unsigned char *input;
+ unsigned long long inputalloc;
+ unsigned long long inputlen;

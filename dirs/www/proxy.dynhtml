@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+# 20110823
+# Jan Mojzis
+# Public domain.
+
+import header, lib, os, htmltemplate, config
+
+if __name__ == '__main__':
+        lib.limit_resources()
+
+
+        t = htmltemplate.Template("html/proxy.html")
+        d = header.header("proxy")
+        d["proxy"] = []
+
+        #for proto in ["http", "jabber", "imap", "smtp", "pop"]:
+        for proto in ["http", "jabber"]:
+                name = "%sproxy" % (proto)
+                tmp = {}
+                tmp["name"] = name
+                tmp["status"] = lib.svc("%s/%s" % (config.servicedir, name))
+
+                tmp1 = {}
+                tmp1["value"] = "true"
+                tmp1["text"] = "%sCurve and %s" % (proto.upper(), proto.upper())
+                tmp1["sl"] = ""
+                tmp2 = {}
+                tmp2["value"] = ""
+                tmp2["text"] = "%sCurve only" % (proto.upper())
+                tmp2["sl"] = ""
+
+                if os.path.exists("etc/%s/env/ALLOWUNENCRYPTED" % (name)):
+                        tmp1["sl"] = 'selected="selected"'
+                else:
+                        tmp2["sl"] = 'selected="selected"'
+
+                if proto == "http":
+                        tmp["encryption"] = [tmp1,tmp2]
+                        tmp["df"]=''
+                        tmp["ipv6df"]=''
+                else:
+                        tmp["encryption"] = [tmp2]
+                        tmp["df"]='disabled="disabled"'
+                        tmp["ipv6df"]='disabled="disabled"'
+
+                if os.path.exists("etc/%s/env/ALLOWIPV6" % (name)):
+                        tmp["ipv6disabledsl"] = ""
+                        tmp["ipv6enabledsl"] = 'selected="selected"'
+                else:
+                        tmp["ipv6disabledsl"] = 'selected="selected"'
+                        tmp["ipv6enabledsl"] = ""
+
+
+                try:
+                        keydir = lib.openreadcloseescape("etc/%s/env/KEYDIR" % name)
+                        mykey  = os.path.basename(keydir)
+                except:
+                        keydir = ""
+                        mykey  = ""
+
+                tmp["keys"] = []
+                for key in lib.curvecp_keys():
+                        tmp1 = {}
+                        if mykey == key:
+                                tmp1["sl"]='selected="selected"'
+                        else:
+                                tmp1["sl"] = ''
+                        tmp1["key"] = key
+                        tmp["keys"].append(tmp1)
+
+
+                d["proxy"].append(tmp)
+
+        t.write(d)
+

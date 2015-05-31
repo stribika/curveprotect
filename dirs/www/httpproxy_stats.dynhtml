@@ -1,0 +1,252 @@
+#!/usr/bin/env python
+
+import sys, os, time, header, lib, htmltemplate
+
+logdir   = "log/httpproxy/"
+page     = ""
+
+
+def getLogs(d = ""):
+        """
+        """
+
+        ret = []
+
+        for f in os.listdir(d):
+                if f[-2:] in [".s",".u"]:
+                        ret.append(f)
+        ret.sort()
+        ret.append("current")
+        return ret
+
+
+
+
+def sort_by_value(d):
+        """
+        """
+        items=list(d.items())
+        backitems=[ [v[1],v[0]] for v in items]
+        backitems.sort()
+        r = [ backitems[i][1] for i in range(0,len(backitems))]
+        r.reverse()
+        return r
+
+
+class Stats:
+        """
+        """
+
+        def __init__(self):
+                """
+                """
+
+                self.responses = {}
+                self.methods   = {}
+                self.speed     = {}
+
+                self.curvehttp = 0
+                self.http = 0
+
+                self.start = None
+                self.end   = None
+
+
+
+        def add_access(self, values = []):
+                """
+                """
+
+                #http/curvehttp
+                if values[3] == "C:":
+                        self.curvehttp += 1
+                elif values[3] == "H:":
+                        self.http += 1
+                else:
+                        return
+
+                #methods
+                if values[5] in self.methods:
+                        self.methods[values[5]] += 1
+                else:
+                        self.methods[values[5]]  = 1
+
+                #responses
+                try:
+                        xxx = int(values[7])
+                except:
+                        pass
+                else:
+                        if values[7] in self.responses:
+                                self.responses[values[7]] += 1
+                        else:
+                                self.responses[values[7]] = 1
+
+                #speed
+                try:
+                        #200 OK only
+                        if values[7] != "200":
+                                raise Exception("xxx")
+                        #skip local requests
+                        if values[4].split(".")[0] in ["127"]:
+                                raise Exception("xxx")
+                        #XXX
+                        #if values[4].split(".")[0] not in ["dns"]:
+                        #        raise Exception("xxx")
+                        dd = lib.taifmt(values[0]).split(":")[0]
+                        ll = int(values[9])
+                        tt = int(values[10])
+                        #XXX skip https and short responses
+                        if tt < 1 or ll < 1024:
+                                raise Exception("xxx")
+                except:
+                        pass
+                else:
+                        if dd in self.speed:
+                                self.speed[dd]["ll"] += ll
+                                self.speed[dd]["tt"] += tt
+                        else:
+                                self.speed[dd] = {}
+                                self.speed[dd]["tt"] = tt
+                                self.speed[dd]["ll"] = ll
+
+        def add_tm(self, start = "", end = ""):
+                """
+                """
+
+                self.start = start
+                self.end   = end
+                return
+
+        def write_stats(self):
+                """
+                """
+
+                try:
+                        t1 = lib.taiconv(self.start)
+                        t2 = lib.taiconv(self.end)
+                        t = t2-t1
+                        if t < 1:
+                                raise
+                except:
+                        t = 1
+
+                #transmited
+                xqueries  = self.curvehttp + self.http
+                #XXX
+                if xqueries < 1:
+                        xqueries = 1
+                phttp      = float(100*self.http)/float(xqueries)
+                pcurvehttp = float(100*self.curvehttp)/float(xqueries)
+
+
+                d = header.header("httpproxy_stats")
+                if self.start:
+                        d["from"] = lib.taifmt(self.start)
+                else:
+                        d["from"] = ""
+
+                if self.end:
+                        d["to"]   = lib.taifmt(self.end)
+                else:
+                        d["to"]   = ""
+                d["seconds"] = str(t)
+                d["urls"] = "%.2f" % (float(self.http + self.curvehttp)/float(t))
+
+                d["total"] = str(self.http + self.curvehttp)
+                d["totalvalue"] = "100"
+                d["http"] = str(self.http) 
+                d["httpvalue"] = "%0.2f" % (phttp)
+                d["curvehttp"] = str(self.curvehttp)
+                d["curvehttpvalue"] = "%0.2f" % (pcurvehttp)
+                d["tables"] = []
+
+                for x in ["methods", "responses"]:
+                        tmp = {}
+                        tmp["name"] = x
+                        tmp["xxxx"] = self.add_x(x)
+                        if len(tmp["xxxx"]):
+                                d["tables"].append(tmp)
+
+                #XXX TODO speed
+                d["speed"] = []
+                for dd in self.speed:
+                        tmp = {}
+                        tmp["date"] = dd;
+                        tmp["latency"] = "%d" % int((self.speed[dd]["ll"] / self.speed[dd]["tt"]))
+                        d["speed"].append(tmp)
+                d["speed"].sort(key=lambda x: x["date"].replace("-", "").replace(" ", ""))
+                d["speed"].reverse()
+
+                return d
+
+
+
+        def add_x(self, t = ""):
+
+                ret = []
+
+                if t == "responses":
+                        x = self.responses
+                        y = "RESPONSES"
+                        i = 10
+                if t == "methods":
+                        x = self.methods
+                        y = "METHODS"
+                        i = 10
+
+
+                if len(x) == 0:
+                        return []
+
+                record_list = sort_by_value(x)
+                for record in record_list:
+                        tmp = {}
+                        tmp["key"] = record
+                        tmp["value"] = str(x[record])
+                        ret.append(tmp)
+                        i-=1
+                        if i == 0:
+                                break
+                return ret
+
+
+#main
+lib.limit_resources()
+
+stats = Stats()
+start = None
+end   = None
+
+for fn in getLogs(logdir):
+
+        f = open("%s/%s" % (logdir, fn), "r")
+
+        while True:
+                line = f.readline()
+                if not len(line):
+                        break
+
+                values = line.split()
+                if len(values) < 3:
+                        continue
+
+                if start == None:
+                        start = values[0]
+
+                if values[2] == "access:":
+                        stats.add_access(values)
+        f.close()
+
+try:
+        end = values[0]
+        stats.add_tm(start,end)
+except:
+        pass
+
+t = htmltemplate.Template("html/httpproxy_stats.html")
+d = stats.write_stats()
+t.write(d)
+
+
+

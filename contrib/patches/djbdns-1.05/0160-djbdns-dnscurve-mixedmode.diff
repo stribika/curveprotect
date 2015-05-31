@@ -1,0 +1,731 @@
+diff -Nur djbdns-1.05/dnscache.c djbdns-1.05.update/dnscache.c
+--- djbdns-1.05/dnscache.c	2013-05-30 12:30:17.369809302 +0200
++++ djbdns-1.05.update/dnscache.c	2013-05-30 12:39:48.537832765 +0200
+@@ -400,8 +400,10 @@
+   _exit(0);
+ }
+ 
++char *dnscurvetype = 0;
++
+ void reload(int sig){
+-  if (!roots_init())
++  if (!roots_init(dnscurvetype))
+     strerr_die2sys(111,FATAL,"unable to read servers: ");
+ }
+ void dump(int sig){
+@@ -472,10 +474,10 @@
+     response_hidettl();
+   if (env_get("FORWARDONLY"))
+     query_forwardonly();
+-  if (env_get("USETXTFORMAT"))
+-    query_usetxtformat();
++  dnscurvetype = env_get("DNSCURVETYPE");
++  query_dnscurvetype(dnscurvetype);
+ 
+-  if (!roots_init())
++  if (!roots_init(dnscurvetype))
+     strerr_die2sys(111,FATAL,"unable to read servers: ");
+ 
+   if (socket_listen(tcp53,20) == -1)
+diff -Nur djbdns-1.05/dns.h djbdns-1.05.update/dns.h
+--- djbdns-1.05/dns.h	2013-05-30 12:30:17.381809303 +0200
++++ djbdns-1.05.update/dns.h	2013-05-30 12:31:08.261811391 +0200
+@@ -43,6 +43,8 @@
+   char nonce[12];
+   char localip[4];
+   char qtype[2];
++  unsigned int paddinglen;
++  char id[2];
+ } ;
+ 
+ extern void dns_random_init(const char *);
+diff -Nur djbdns-1.05/dns_sortip.c djbdns-1.05.update/dns_sortip.c
+--- djbdns-1.05/dns_sortip.c	2013-05-30 12:30:17.373809303 +0200
++++ djbdns-1.05.update/dns_sortip.c	2013-05-30 09:46:21.597405257 +0200
+@@ -21,8 +21,9 @@
+ 
+ void dns_sortip2(char *s,char *t,unsigned int n)
+ {
+-  unsigned int i;
+-  char tmp[32];
++  unsigned int i,j,nn = n;
++  char tmp[33];
++  char *kk;
+ 
+   while (n > 1) {
+     i = dns_random(n);
+@@ -30,8 +31,37 @@
+     byte_copy(tmp,4,s + (i << 2));
+     byte_copy(s + (i << 2),4,s + (n << 2));
+     byte_copy(s + (n << 2),4,tmp);
+-    byte_copy(tmp,32,t + (i << 5));
+-    byte_copy(t + (i << 5),32,t + (n << 5));
+-    byte_copy(t + (n << 5),32,tmp);
++    byte_copy(tmp,33,t + 33 * i);
++    byte_copy(t + 33 * i,33,t + 33 * n);
++    byte_copy(t + 33 * n,33,tmp);
++  }
++
++  n = nn;
++  j = 0;
++  for (i = 0; i < n; ++i) {
++    kk = t + 33 * i;
++    if (kk[0] == 1) {
++      byte_copy(tmp,4,s + (j << 2));
++      byte_copy(s + (j << 2),4,s + (i << 2));
++      byte_copy(s + (i << 2),4,tmp);
++      byte_copy(tmp,33,t + 33 * j);
++      byte_copy(t + 33 * j,33,t + 33 * i);
++      byte_copy(t + 33 * i,33,tmp);
++      ++j;
++    }
++  }
++
++  n = nn;
++  for (i = 0; i < n; ++i) {
++    kk = t + 33 * i;
++    if (kk[0] == 2) {
++      byte_copy(tmp,4,s + (j << 2));
++      byte_copy(s + (j << 2),4,s + (i << 2));
++      byte_copy(s + (i << 2),4,tmp);
++      byte_copy(tmp,33,t + 33 * j);
++      byte_copy(t + 33 * j,33,t + 33 * i);
++      byte_copy(t + 33 * i,33,tmp);
++      ++j;
++    }
+   }
+ }
+diff -Nur djbdns-1.05/dns_transmit.c djbdns-1.05.update/dns_transmit.c
+--- djbdns-1.05/dns_transmit.c	2013-05-30 12:30:17.373809303 +0200
++++ djbdns-1.05.update/dns_transmit.c	2013-05-30 09:31:38.529368971 +0200
+@@ -20,73 +20,118 @@
+ error!
+ #endif
+ 
+-static unsigned int padding(unsigned int len) {
+-  return 128 - (len + 16) % 64;
+-}
+-
+-
+ static void makebasequery(struct dns_transmit *d,char *query)
+ {
+   unsigned int len;
+ 
+   len = dns_domain_length(d->name);
+ 
+-  byte_copy(query,2,d->nonce + 8);
++  byte_copy(query,2,d->id);
+   byte_copy(query + 2,10,d->flagrecursive ? "\1\0\0\1\0\0\0\0\0\0" : "\0\0\0\1\0\0\0\0\0\0gcc-bug-workaround");
+   byte_copy(query + 12,len,d->name);
+   byte_copy(query + 12 + len,2,d->qtype);
+   byte_copy(query + 14 + len,2,DNS_C_IN);
++  if (d->paddinglen > 0) {
++      byte_zero(query + 16 + len,d->paddinglen);
++      query[16 + len + d->paddinglen - 1] = 0x80;
++  }
+ }
+ 
+-static void prepquery(struct dns_transmit *d)
+-{
++static void regularquery(struct dns_transmit *d) {
++
+   unsigned int len;
+-  char nonce[crypto_box_NONCEBYTES];
+-  const char *key;
+-  unsigned int m;
+-  unsigned int suffixlen;
++
++  d->paddinglen = 0;
++
++  len = dns_domain_length(d->name) + d->paddinglen;
++  d->querylen = len + 18;
++
++  uint16_pack_big(d->query, d->querylen - 2);
++  d->id[0] = dns_random(256);
++  d->id[1] = dns_random(256);
++  makebasequery(d, d->query + 2);
++}
++
++static void streamlinedquery(struct dns_transmit *d) {
++
++  unsigned int len;
++  char nonce[24];
++
++  d->paddinglen = 0;
++
++  len = dns_domain_length(d->name) + d->paddinglen;
++  d->querylen = len + 86;
+ 
+   dns_nonce(d->nonce);
++  byte_copy(nonce, 12, d->nonce);
++  byte_zero(nonce + 12, 12);
+ 
+-  if (!d->keys) {
+-    byte_copy(d->query + 2,2,d->nonce + 8);
+-    return;
+-  }
++  byte_zero(d->query + 38, 32);
++  d->id[0] = dns_random(256);
++  d->id[1] = dns_random(256);
++  makebasequery(d, d->query + 38 + 32);
++  crypto_box_afternm((unsigned char *)d->query + 38, (unsigned char *)d->query + 38, len + 48, (unsigned char *)nonce, (unsigned char *) d->keys + 33 * d->curserver + 1);
+ 
+-  len = dns_domain_length(d->name);
+-  if (!d->suffix) len += padding(len);
++  uint16_pack_big(d->query, d->querylen - 2);
++  byte_copy(d->query + 2, 8, dns_magicq);
++  byte_copy(d->query + 10, 32, d->pubkey);
++  byte_copy(d->query + 42, 12, nonce);
++}
+ 
+-  byte_copy(nonce,12,d->nonce);
+-  byte_zero(nonce + 12,12);
+-  key = d->keys + 32 * d->curserver;
++static void txtquery(struct dns_transmit *d) {
+ 
+-  byte_zero(d->query,32);
+-  makebasequery(d,d->query + 32);
+-  crypto_box_afternm((unsigned char *) d->query,(const unsigned char *) d->query,len + 48,(const unsigned char *) nonce,(const unsigned char *) key);
+-
+-  if (!d->suffix) {
+-    byte_copyr(d->query + 54,len + 32,d->query + 16);
+-    uint16_pack_big(d->query,len + 84);
+-    byte_copy(d->query + 2,8,dns_magicq);
+-    byte_copy(d->query + 10,crypto_box_PUBLICKEYBYTES,d->pubkey);
+-    byte_copy(d->query + 42,12,nonce);
+-    return;
+-  }
++  unsigned int len, suffixlen, m;
++  char nonce[24];
+ 
+-  byte_copyr(d->query + d->querylen - len - 32,len + 32,d->query + 16);
+-  byte_copy(d->query + d->querylen - len - 44,12,nonce);
++  d->paddinglen = 0;
+ 
++  len = dns_domain_length(d->name) + d->paddinglen;
+   suffixlen = dns_domain_length(d->suffix);
+   m = base32_bytessize(len + 44);
++  d->querylen = m + suffixlen + 73;
++
++  dns_nonce(d->nonce);
++  byte_copy(nonce, 12, d->nonce);
++  byte_zero(nonce + 12, 12);
++
++  byte_zero(d->query, 32);
++  d->id[0] = dns_random(256);
++  d->id[1] = dns_random(256);
++  makebasequery(d, d->query + 32);
++  crypto_box_afternm((unsigned char *)d->query, (unsigned char *)d->query, len + 48, (unsigned char *)nonce, (unsigned char *) d->keys + 33 * d->curserver + 1);
++
++  byte_copyr(d->query + d->querylen - len - 32, len + 32, d->query + 16);
++  byte_copy(d->query + d->querylen - len - 44, 12, nonce);
++
++  uint16_pack_big(d->query, d->querylen - 2);
++  d->query[0] = dns_random(256);
++  d->query[1] = dns_random(256);
++  byte_copy(d->query + 4, 10, "\0\0\0\1\0\0\0\0\0\0");
++  base32_encodebytes(d->query + 14,d->query + d->querylen - len - 44, len + 44);
++  base32_encodekey(d->query + 14 + m, d->pubkey);
++  byte_copy(d->query + 69 + m, suffixlen, d->suffix);
++  byte_copy(d->query + 69 + m + suffixlen, 2, DNS_T_TXT);
++  byte_copy(d->query + 69 + m + suffixlen + 2, 2, DNS_C_IN);
++}
++
++static void prepquery(struct dns_transmit *d)
++{
++  const char *key;
+ 
+-  uint16_pack_big(d->query,d->querylen - 2);
+-  d->query[2] = dns_random(256);
+-  d->query[3] = dns_random(256);
+-  byte_copy(d->query + 4,10,"\0\0\0\1\0\0\0\0\0\0");
+-  base32_encodebytes(d->query + 14,d->query + d->querylen - len - 44,len + 44);
+-  base32_encodekey(d->query + 14 + m,d->pubkey);
+-  byte_copy(d->query + 69 + m,suffixlen,d->suffix);
+-  byte_copy(d->query + 69 + m + suffixlen,4,DNS_T_TXT DNS_C_IN);
++  if (!d->keys) {
++    regularquery(d);
++    return;
++  }
++  key = d->keys + 33 * d->curserver;
++  if (key[0] == 0) {
++    regularquery(d);
++    return;
++  }
++  if (key[0] == 1) {
++    streamlinedquery(d);
++    return;
++  }
++  txtquery(d);
+ }
+ 
+ static int uncurve(const struct dns_transmit *d,char *buf,unsigned int *lenp)
+@@ -104,17 +149,18 @@
+   unsigned int namelen;
+ 
+   if (!d->keys) return 0;
++  key = d->keys + 33 * d->curserver;
++  if (key[0] == 0) return 0;
+ 
+-  key = d->keys + 32 * d->curserver;
+   len = *lenp;
+ 
+-  if (!d->suffix) {
++  if (key[0] == 1) {
+     if (len < 48) return 1;
+     if (byte_diff(buf,8,dns_magicr)) return 1;
+     if (byte_diff(buf + 8,12,d->nonce)) return 1;
+     byte_copy(nonce,24,buf + 8);
+     byte_zero(buf + 16,16);
+-    if (crypto_box_open_afternm((unsigned char *) buf + 16,(const unsigned char *) buf + 16,len - 16,(const unsigned char *) nonce,(const unsigned char *) key)) return 1;
++    if (crypto_box_open_afternm((unsigned char *) buf + 16,(const unsigned char *) buf + 16,len - 16,(const unsigned char *) nonce,(const unsigned char *) key + 1)) return 1;
+     byte_copy(buf,len - 48,buf + 48);
+     *lenp = len - 48;
+     return 0;
+@@ -154,7 +200,7 @@
+   byte_copy(nonce,12,d->nonce);
+   byte_copy(nonce + 12,12,buf + 4);
+   byte_zero(buf,16);
+-  if (crypto_box_open_afternm((unsigned char *) buf,(const unsigned char *) buf,j,(const unsigned char *) nonce,(const unsigned char *) key)) return 1;
++  if (crypto_box_open_afternm((unsigned char *) buf,(const unsigned char *) buf,j,(const unsigned char *) nonce,(const unsigned char *) key + 1)) return 1;
+   byte_copy(buf,j - 32,buf + 32);
+   *lenp = j - 32;
+   return 0;
+@@ -188,7 +234,7 @@
+   unsigned int pos;
+ 
+   pos = dns_packet_copy(buf,len,0,out,12); if (!pos) return 1;
+-  if (byte_diff(out,2,d->nonce + 8)) return 1;
++  if (byte_diff(out,2,d->id)) return 1;
+   if (out[4] != 0) return 1;
+   if (out[5] != 1) return 1;
+ 
+@@ -349,7 +395,7 @@
+   return dns_transmit_start2(d,servers,flagrecursive,q,qtype,localip,0,0,0);
+ }
+ 
+-int dns_transmit_start2(struct dns_transmit *d,const char servers[64],int flagrecursive,const char *q,const char qtype[2],const char localip[4],const char keys[512],const char pubkey[crypto_box_PUBLICKEYBYTES],const char *suffix)
++int dns_transmit_start2(struct dns_transmit *d,const char servers[64],int flagrecursive,const char *q,const char qtype[2],const char localip[4],const char keys[528],const char pubkey[crypto_box_PUBLICKEYBYTES],const char *suffix)
+ {
+   unsigned int len;
+   unsigned int suffixlen;
+@@ -360,22 +406,15 @@
+ 
+   len = dns_domain_length(q);
+ 
+-  if (!keys)
+-    d->querylen = len + 18;
+-  else if (!suffix)
+-    d->querylen = len + 86 + padding(len);
+-  else {
+-    suffixlen = dns_domain_length(suffix);
+-    m = base32_bytessize(len + 44);
+-    d->querylen = m + suffixlen + 73;
+-  }
++  d->paddinglen = 0;
++
++  if (!suffix) suffix = "";
++  suffixlen = dns_domain_length(suffix);
++  m = base32_bytessize(len + 44 + d->paddinglen);
++  d->querylen = m + suffixlen + 73;
+ 
+   d->query = alloc(d->querylen);
+   if (!d->query) return -1;
+-  if (keys && !suffix) {
+-    byte_zero(d->query, d->querylen);
+-    d->query[len + padding(len) + 47] = 0x80; /* DNSCrypt compatibility */
+-  }
+ 
+   d->name = q;
+   byte_copy(d->qtype,2,qtype);
+@@ -386,11 +425,13 @@
+   d->pubkey = pubkey;
+   d->suffix = suffix;
+ 
++#if 0
+   if (!d->keys) {
+     uint16_pack_big(d->query,len + 16);
+     makebasequery(d,d->query + 2);
+     d->name = d->query + 14; /* keeps dns_transmit_start backwards compatible */
+   }
++#endif
+ 
+   d->udploop = flagrecursive ? 1 : 0;
+ 
+diff -Nur djbdns-1.05/log.c djbdns-1.05.update/log.c
+--- djbdns-1.05/log.c	2013-05-30 12:30:17.397809304 +0200
++++ djbdns-1.05.update/log.c	2013-05-30 09:29:04.553362655 +0200
+@@ -145,19 +145,27 @@
+   line();
+ }
+ 
+-void log_tx(const char *q,const char qtype[2],const char *control,const char servers[64],unsigned int flaghavekeys,unsigned int gluelessness)
++void log_tx(const char *q,const char qtype[2],const char *control,const char servers[64],const char keys[64],unsigned int flaghavekeys,unsigned int gluelessness)
+ {
+-  int i;
++  int i,j;
++  char *s,*k;
+ 
+   string("tx "); number(gluelessness); space();
+   logtype(qtype); space(); name(q); space();
+   name(control);
+   string(flaghavekeys ? " +" : " -");
+-  for (i = 0;i < 64;i += 4)
++  for (i = 0;i < 64;i += 4) {
++    j = i >> 2;
+     if (byte_diff(servers + i,4,"\0\0\0\0")) {
++      k = keys + 33 * j;
++      if (k[0] == 0) s = "R";
++      else if (k[0] == 1) s = "S";
++      else if (k[0] == 2) s = "T";
+       space();
++      string(s);
+       ip(servers + i);
+     }
++  }
+   line();
+ }
+ 
+diff -Nur djbdns-1.05/log.h djbdns-1.05.update/log.h
+--- djbdns-1.05/log.h	2013-05-30 12:30:17.397809304 +0200
++++ djbdns-1.05.update/log.h	2013-05-30 09:05:09.913303632 +0200
+@@ -18,7 +18,7 @@
+ extern void log_cachednxdomain(const char *);
+ extern void log_cachedns(const char *,const char *);
+ 
+-extern void log_tx(const char *,const char *,const char *,const char *,unsigned int,unsigned int);
++extern void log_tx(const char *,const char *,const char *,const char *,const char *,unsigned int,unsigned int);
+ 
+ extern void log_nxdomain(const char *,const char *,unsigned int);
+ extern void log_nodata(const char *,const char *,const char *,unsigned int);
+diff -Nur djbdns-1.05/query.c djbdns-1.05.update/query.c
+--- djbdns-1.05/query.c	2013-05-30 12:30:17.393809303 +0200
++++ djbdns-1.05.update/query.c	2013-05-30 12:39:28.869831954 +0200
+@@ -41,11 +41,28 @@
+   flagforwardonly = 1;
+ }
+ 
+-static int flagusetxtformat = 0;
++static int flagdnscurvetype1 = 1;
++static int flagdnscurvetype2 = 2;
+ 
+-void query_usetxtformat(void)
++void query_dnscurvetype(char *x)
+ {
+-  flagusetxtformat = 1;
++  if (!x) return;
++
++  if (*x == '1') {
++    /* streamlined only */
++    flagdnscurvetype1 = 1;
++    flagdnscurvetype2 = 0;
++  }
++  else if (*x == '2') {
++    /* txt only */
++    flagdnscurvetype1 = 2;
++    flagdnscurvetype2 = 0;
++  }
++  else {
++    /* mixed */
++    flagdnscurvetype1 = 1;
++    flagdnscurvetype2 = 2;
++  }
+ }
+ 
+ static void cachegeneric(const char type[2],const char *d,const char *data,unsigned int datalen,uint32 ttl, int flagns)
+@@ -200,25 +217,42 @@
+   return 0;
+ }
+ 
+-static void addserver(struct query *z,const char *addr,int flaghaskey,const char *key)
++static void addserver(struct query *z,const char *addr,const char *key)
+ {
+   int k;
++  int i;
++  char *kk;
+ 
+-  if (z->flaghavekeys[z->level - 1]) {
+-    if (!flaghaskey) return;
+-  } else if (flaghaskey) {
+-    byte_zero(z->servers[z->level - 1],64);
+-    byte_zero(z->keys[z->level - 1],512);
+-    z->flaghavekeys[z->level - 1] = 1;
++  if (key) z->flaghavekeys[z->level - 1] = 1;
++
++  for (k = 0;k < 64;k += 4) {
++    i = k >> 2;
++    if (byte_equal(z->servers[z->level - 1] + k,4,"\0\0\0\0")) {
++      byte_copy(z->servers[z->level - 1] + k,4,addr);
++      kk = z->keys[z->level - 1] + 33 * i;
++      if (key) {
++        byte_copy(kk + 1,32,key);
++        kk[0] = flagdnscurvetype1;
++      }
++      else {
++        kk[0] = 0;
++      }
++      break;
++    }
+   }
+ 
+-  for (k = 0;k < 64;k += 4)
++  /* add txt */
++  if (!key || !flagdnscurvetype2) return;
++  for (k = 0;k < 64;k += 4) {
++    i = k >> 2;
++    kk = z->keys[z->level - 1] + 33 * i;
+     if (byte_equal(z->servers[z->level - 1] + k,4,"\0\0\0\0")) {
+       byte_copy(z->servers[z->level - 1] + k,4,addr);
+-      if (flaghaskey)
+-        byte_copy(z->keys[z->level - 1] + 8 * k,32,key);
++      byte_copy(kk + 1,32,key);
++      kk[0] = flagdnscurvetype2;
+       break;
+     }
++  }
+ }
+ 
+ static int doit(struct query *z,int state)
+@@ -279,7 +313,7 @@
+ 
+   if (globalip(d,misc)) {
+     if (z->level) {
+-      addserver(z,misc,0,0);
++      addserver(z,misc,0);
+       goto LOWERLEVEL;
+     }
+     if (!rqa(z)) goto DIE;
+@@ -392,7 +426,7 @@
+           flaghaskey = findkey(d,pubkey);
+ 	  log_cachedanswer(d,DNS_T_A);
+ 	  while (cachedlen >= 4) {
+-            addserver(z,cached,flaghaskey,pubkey);
++            addserver(z,cached,flaghaskey ? pubkey : 0);
+ 	    cached += 4;
+ 	    cachedlen -= 4;
+ 	  }
+@@ -482,6 +516,7 @@
+         if (cached && cachedlen) {
+ 	  z->control[z->level] = d;
+           byte_zero(z->servers[z->level],64);
++          byte_zero(z->keys[z->level],528);
+           z->flaghavekeys[z->level] = 0;
+           for (j = 0;j < QUERY_MAXNS;++j)
+             dns_domain_free(&z->ns[z->level][j]);
+@@ -520,27 +555,28 @@
+       break;
+   if (j == 64) goto SERVFAIL;
+ 
+-  if (z->flaghavekeys[z->level]) {
+-    byte_copy(key,2,DNS_T_AXFR);
+-    for (j = 0;j < 64;j += 4)
+-      if (byte_diff(z->servers[z->level] + j,4,"\0\0\0\0")) {
+-        whichkey = z->keys[z->level] + 8 * j;
+-        byte_copy(key + 2,32,whichkey);
++  byte_copy(key,2,DNS_T_AXFR);
++  for (j = 0;j < 64;j += 4) {
++    k = j >> 2;
++    if (byte_diff(z->servers[z->level] + j,4,"\0\0\0\0")) {
++      whichkey = z->keys[z->level] + 33 * k;
++      if (whichkey[0]) {
++        byte_copy(key + 2,32,whichkey + 1);
+         cached = cache_get(key,34,&cachedlen,&ttl,0);
+         if (cached && (cachedlen == 32)) {
+-          byte_copy(whichkey,32,cached);
++          byte_copy(whichkey + 1,32,cached);
+           continue;
+         }
+-        crypto_box_beforenm((unsigned char *) whichkey,(const unsigned char *) whichkey,(const unsigned char *) secretkey);
+-        cache_set(key,34,whichkey,32,655360,0);
++        crypto_box_beforenm((unsigned char *) whichkey + 1,(const unsigned char *) whichkey + 1,(const unsigned char *) secretkey);
++        cache_set(key,34,whichkey + 1,32,655360,0);
+       }
++    }
+   }
+ 
+   dns_sortip2(z->servers[z->level],z->keys[z->level],16);
+   dtype = z->level ? DNS_T_A : z->type;
+-  log_tx(z->name[z->level],dtype,z->control[z->level],z->servers[z->level],z->flaghavekeys[z->level],z->level);
+-  control = flagusetxtformat ? z->control[z->level] : 0;
+-  if (dns_transmit_start2(&z->dt,z->servers[z->level],flagforwardonly,z->name[z->level],dtype,z->localip,z->flaghavekeys[z->level] ? z->keys[z->level] : 0,publickey,control) == -1) goto DIE;
++  log_tx(z->name[z->level],dtype,z->control[z->level],z->servers[z->level],z->keys[z->level],z->flaghavekeys[z->level],z->level);
++  if (dns_transmit_start2(&z->dt,z->servers[z->level],flagforwardonly,z->name[z->level],dtype,z->localip,z->keys[z->level],publickey,z->control[z->level]) == -1) goto DIE;
+   return 0;
+ 
+ 
+@@ -839,7 +875,7 @@
+             if (byte_equal(header + 2,2,DNS_C_IN)) /* should always be true */
+               if (datalen == 4) {
+                 if (!dns_packet_copy(buf,len,pos,misc,4)) goto DIE;
+-                addserver(z,misc,flaghaskey,pubkey);
++                addserver(z,misc,flaghaskey ? pubkey : 0);
+               }
+         pos += datalen;
+       }
+diff -Nur djbdns-1.05/query.h djbdns-1.05.update/query.h
+--- djbdns-1.05/query.h	2013-05-30 12:30:17.397809304 +0200
++++ djbdns-1.05.update/query.h	2013-05-30 12:36:59.953825839 +0200
+@@ -15,7 +15,7 @@
+   char *control[QUERY_MAXLEVEL]; /* pointing inside name */
+   char *ns[QUERY_MAXLEVEL][QUERY_MAXNS];
+   char servers[QUERY_MAXLEVEL][64];
+-  char keys[QUERY_MAXLEVEL][512];
++  char keys[QUERY_MAXLEVEL][528];
+   int flaghavekeys[QUERY_MAXLEVEL];
+   char *alias[QUERY_MAXALIAS];
+   uint32 aliasttl[QUERY_MAXALIAS];
+@@ -31,6 +31,6 @@
+ 
+ extern void query_init(const unsigned char *, const unsigned char *);
+ extern void query_forwardonly(void);
+-extern void query_usetxtformat(void);
++extern void query_dnscurvetype(char *);
+ 
+ #endif
+diff -Nur djbdns-1.05/roots.c djbdns-1.05.update/roots.c
+--- djbdns-1.05/roots.c	2013-05-30 12:30:17.357809302 +0200
++++ djbdns-1.05.update/roots.c	2013-05-30 12:39:32.253832094 +0200
+@@ -11,6 +11,9 @@
+ #include "roots.h"
+ #include "hexparse.h"
+ 
++static int flagdnscurvetype1 = 1;
++static int flagdnscurvetype2 = 2;
++
+ static stralloc data;
+ 
+ static int roots_find(char *q)
+@@ -23,7 +26,7 @@
+     j = dns_domain_length(data.s + i);
+     if (dns_domain_equal(data.s + i,q)) return i + j;
+     i += j;
+-    i += 64 + 512 + 1;
++    i += 64 + 528 + 1;
+   }
+   return -1;
+ }
+@@ -41,15 +44,15 @@
+   }
+ }
+ 
+-int roots(char servers[64], char keys[512], int *flaghavekeys, char *q)
++int roots(char servers[64], char keys[528], int *flaghavekeys, char *q)
+ {
+   int r;
+   r = roots_find(q);
+   if (r == -1) return 0;
+   byte_copy(servers,64,data.s + r);
+-  byte_copy(keys,512,data.s + r + 64);
++  byte_copy(keys,528,data.s + r + 64);
+   *flaghavekeys = 0;
+-  if (data.s[r + 64 + 512]) *flaghavekeys = 1;
++  if (data.s[r + 64 + 528]) *flaghavekeys = 1;
+   return 1;
+ }
+ 
+@@ -65,13 +68,16 @@
+   static char *q;
+   static stralloc text;
+   char servers[64];
+-  char keys[512];
++  char keys[528];
+   int flaghavekeys;
+   int serverslen;
+   int keyslen;
+   int i;
+   int j;
+   int k;
++  char *kk;
++
++  byte_zero(keys, 528);
+ 
+   for (;;) {
+     errno = 0;
+@@ -106,15 +112,25 @@
+           text.s[i] = 0;
+ 	  if (serverslen <= 60) {
+ 	    if (ip4_scan(text.s + j,servers + serverslen)) {
+-              if (flaghavekeys) {
+-                if (k && hexparse((unsigned char *)(keys + keyslen), 32, text.s + k)) {
+-	          serverslen += 4;
+-	          keyslen += 32;
++              kk = keys + keyslen;
++              kk[0] = 0;
++              if (k && hexparse((unsigned char *)(kk + 1), 32, text.s + k)) {
++                kk[0] = flagdnscurvetype1;
++                serverslen += 4;
++	        keyslen += 33;
++                /* add txt */
++	        if (flagdnscurvetype2 && serverslen <= 60) {
++                  byte_copy(servers + serverslen, 4, servers + serverslen - 4);
++                  byte_copy(keys + keyslen, 33, keys + keyslen - 33);
++                  kk = keys + keyslen;
++                  kk[0] = flagdnscurvetype2;
++                  serverslen += 4;
++                  keyslen += 33;
+                 }
+               }
+               else {
+-	          serverslen += 4;
+-	          keyslen += 32;
++                serverslen += 4;
++	        keyslen += 33;
+               }
+             }
+           }
+@@ -123,11 +139,11 @@
+ 	}
+       }
+       byte_zero(servers + serverslen,64 - serverslen);
+-      byte_zero(keys + keyslen,512 - keyslen);
++      byte_zero(keys + keyslen,528 - keyslen);
+ 
+       if (!stralloc_catb(&data,q,dns_domain_length(q))) return 0;
+       if (!stralloc_catb(&data,servers,64)) return 0;
+-      if (!stralloc_catb(&data,keys,512)) return 0;
++      if (!stralloc_catb(&data,keys,528)) return 0;
+       if (flaghavekeys) {
+         if (!stralloc_catb(&data,"1",1)) return 0;
+       }
+@@ -151,11 +167,29 @@
+   return r;
+ }
+ 
+-int roots_init(void)
++int roots_init(char *x)
+ {
+   int fddir;
+   int r;
+ 
++  if (x) {
++    if (*x == '1') {
++      /* streamlined only */
++      flagdnscurvetype1 = 1;
++      flagdnscurvetype2 = 0;
++    }
++    else if (*x == '2') {
++      /* txt only */
++      flagdnscurvetype1 = 2;
++      flagdnscurvetype2 = 0;
++    }
++    else {
++      /* mixed */
++      flagdnscurvetype1 = 1;
++      flagdnscurvetype2 = 2;
++    }
++  }
++
+   if (!stralloc_copys(&data,"")) return 0;
+ 
+   fddir = open_read(".");
+diff -Nur djbdns-1.05/roots.h djbdns-1.05.update/roots.h
+--- djbdns-1.05/roots.h	2013-05-30 12:30:17.357809302 +0200
++++ djbdns-1.05.update/roots.h	2013-05-30 12:39:16.805831440 +0200
+@@ -3,6 +3,6 @@
+ 
+ extern int roots(char *,char *, int *,char *);
+ extern int roots_same(char *,char *);
+-extern int roots_init(void);
++extern int roots_init(char *);
+ 
+ #endif

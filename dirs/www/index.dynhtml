@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+# 20110802
+# Jan Mojzis
+# Public domain.
+
+import header, lib, htmltemplate
+
+if __name__ == '__main__':
+
+        lib.limit_resources()
+        t = htmltemplate.Template("html/index.html")
+        d = header.header("index")
+        t.write(d)
+
+

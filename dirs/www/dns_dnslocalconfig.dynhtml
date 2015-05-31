@@ -1,0 +1,170 @@
+#!/usr/bin/env python
+# 201108015
+# Jan Mojzis
+# Public domain.
+
+import lib, sys, os, cgi, time, check, config
+
+def create(fn, data):
+        f = open(fn, "wb")
+        f.write(data)
+        f.flush()
+        os.fsync(f.fileno())
+        f.close()
+
+def makeconfigdir(zone = "", period = 0, config = "", service = "", xtype = "", timeout= 0, ed25519keydir = ""):
+
+        d = "etc/dnslocal/conf/%s" % (zone)
+        p = "etc/dnslocal/conf/%s/period" % (zone)
+        l = "../../../../bin/dnslocal-run-%s" % (xtype)
+        r = "etc/dnslocal/conf/%s/run" % (zone)
+        t = "etc/dnslocal/conf/%s/type" % (zone)
+        c = "etc/dnslocal/conf/%s/config" % (zone)
+        k = "etc/dnslocal/conf/%s/ed25519dir" % (zone)
+        tm = "etc/dnslocal/conf/%s/timeout" % (zone)
+
+        os.umask(022)
+        os.mkdir(d,0755)
+        create(p, str(period))
+        create(tm, str(timeout))
+        create(t, service)
+        create(c, config)
+        os.symlink(l, r)
+        if ed25519keydir:
+          create(k, ed25519keydir)
+
+try:
+        lib.limit_resources()
+        q = cgi.parse()
+
+        submit = q['submit'][0]
+
+        if submit != "download all":
+
+                #zone
+                zone = q['zone'][0]
+                check.zone(zone)
+
+                if zone in ["@","arpa"]:
+                        raise ValueError("bad zone name")
+
+                #files
+                fn="etc/dnslocal/conf/%s" % (zone)
+                fncache="etc/dnscache/root/servers/%s" % (zone)
+                periodfn="etc/dnslocal/conf/%s/period" % (zone)
+
+        controlfn = "%s/dnslocaldownload/supervise/control" % (config.servicedir)
+        cachecontrolfn = "%s/dnscache/supervise/control" % (config.servicedir)
+        
+
+        if submit == "download all":
+                for d in os.listdir("etc/dnslocal/conf"):
+                        try:
+                                periodfn="etc/dnslocal/conf/%s/period" % (d)
+                                lib.setutime(periodfn, time.time())
+                        except (IOError, OSError):
+                                continue
+
+                lib.openwriteclose(controlfn,"h")
+
+        elif submit == "download now":
+                lib.setutime(periodfn, time.time())
+                lib.openwriteclose(controlfn,"h")
+
+        elif submit == "remove":
+                lib.tryunlink(fncache)
+                lib.openwriteclose(cachecontrolfn,"h")
+                lib.recursiverrm(fn)
+                lib.openwriteclose(controlfn,"t")
+
+        elif submit == "add":
+
+                #ips
+                ips = "%s\n" % lib.tinydnsip
+
+                #service
+                service = q['service'][0]
+
+                #conf/url
+                conf = q['conf'][0].strip()
+
+                #interval
+                try:
+                        interval = int(q['interval'][0])
+                except:
+                        interval = 3600
+                else:
+                        if interval < 60:
+                                interval = 60
+                        if interval > 604800:
+                                interval = 604800
+        
+                #timeout
+                try:
+                        timeout = int(q['timeout'][0])
+                except:
+                        timeout = 20
+
+
+                #ed25519keydir
+                try:
+                        k = q['ed25519keydir'][0]
+                        ed25519keydir="/%s/%s/%s" % (lib.basedir,lib.ed25519_keydir, k)
+                except:
+                        ed25519keydir=""
+
+
+                if service == "AXFRDownload":
+
+                        config=""
+                        for line in conf.split(","):
+                                try:
+                                        (host, xport) = line.split(':',1)
+                                        port = int(xport)
+                                except ValueError:
+                                        host = line
+                                        port = 53
+                                config = "%s%s:%d\n" % (config, host, port)
+                        makeconfigdir(zone, interval, config, service, "axfr", timeout, "")
+
+                elif service == "HTTPDownload":
+                        config=conf.replace(",","\n")
+                        makeconfigdir(zone, interval, config, service, "http", timeout, ed25519keydir)
+
+                elif service == "DNSAnchor":
+                        ips = ""
+                        for i in conf.split(','):
+                                ip = i.strip()
+                                check.ip(ip)
+                                ips = "%s%s\n" % (ips, ip)
+                        data = ""
+
+                elif service == "DNSCurveAnchor":
+                        ips = ""
+                        for s in conf.split(','):
+                                (ip, key) = lib.parse_ipkey(s)
+                                check.ip(ip)
+                                ips = "%s%s|%s\n" % (ips, ip, key)
+                        data = ""
+                else:
+                        raise ValueError("Unknown service")
+
+
+                if os.path.exists(fncache):
+                        raise ValueError("exists")
+
+                try:
+                        lib.openwritecloserename(fncache,ips,"etc")
+                except:
+                        raise
+
+                lib.openwriteclose(controlfn,"t")
+                lib.openwriteclose(cachecontrolfn,"h")
+        else:
+                raise ValueError("Unknown submit type")
+
+except:
+        lib.print_refresh_failed("dns")
+else:
+        lib.print_refresh_success("dns")
+

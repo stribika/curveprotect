@@ -1,0 +1,59 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_proxy.css
+</style>
+
+<div class="line label">
+  <div class="proxy-name">proxy</div>
+  <div class="proxy-keydir">authorization key</div>
+<!--
+  <div class="proxy-encryption">encryption</div>
+  <div class="proxy-ipv6">ipv6</div>
+-->
+  <div class="proxy-encryption"></div>
+  <div class="proxy-ipv6"></div>
+  <div class="proxy-submit"></div>
+  <div class="proxy-submit2"></div>
+  <div class="proxy-status"></div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_proxy%
+<form name="input" action="proxy_config.dynhtml" method="get">
+  <div class="line">
+    <div class="proxy-name"><input class="proxy-name"type="text" name="name" value="%TEMPLATE_VARIABLE_name%" readonly/></div>
+    <div  class="proxy-keydir">
+      <select class="proxy-keydir" name="keydir">')
+        <option value="">random generated</option>')
+%TEMPLATE_BLOCKBEGIN_keys%
+        <option value="%TEMPLATE_VARIABLE_key%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_key%</option>
+%TEMPLATE_BLOCKEND_keys%
+      </select>
+    </div>
+<!--
+    <div class="proxy-encryption">
+      <select class="proxy-encryption" name="allowunencrypted" %TEMPLATE_VARIABLE_df%>
+%TEMPLATE_BLOCKBEGIN_encryption%
+        <option value="%TEMPLATE_VARIABLE_value%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_text%</option>
+%TEMPLATE_BLOCKEND_encryption%
+      </select>
+    </div>
+    <div class="proxy-ipv6">
+      <select class="proxy-ipv6" name="ipv6" %TEMPLATE_VARIABLE_ipv6df%>
+        <option value="enabled" %TEMPLATE_VARIABLE_ipv6enabledsl%>enabled</option>
+        <option value="disabled" %TEMPLATE_VARIABLE_ipv6disabledsl%>disabled</option>
+      </select>
+    </div>
+-->
+    <div class="proxy-encryption"></div>
+    <div class="proxy-ipv6"></div>
+    <div class="proxy-submit"><input class="submit" type="submit" name="submit" value="change" /></div>
+    <div class="proxy-submit2 submit"><a class="submit" href="log.dynhtml?name=%TEMPLATE_VARIABLE_name%">log</a></div>
+    <div class="proxy-status">%TEMPLATE_VARIABLE_status%</div>
+  </div><div class="lineend"></div>
+</form> 
+%TEMPLATE_BLOCKEND_proxy%
+
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html
+

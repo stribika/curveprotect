@@ -1,0 +1,42 @@
+#!/bin/sh -e
+
+#20121128
+#Jan Mojzis
+#Public domain.
+
+[ -f do-rpm ] || (echo "file do-rpm not found"; exit 111;)
+[ -f do-tarbz2 ] || (echo "file do-tarbz2 not found"; exit 111;)
+[ -f conf-home ] || (echo "file conf-home not found"; exit 111;)
+[ -f conf-version ] || (echo "file conf-version not found"; exit 111;)
+which rpmbuild 1>/dev/null 2>/dev/null || (echo "program rpmbuild not found"; exit 111;)
+
+curveprotectdir=`head -1 conf-home`
+version=`head -1 conf-version`
+build="`pwd`/build"
+
+#create tarball
+[ -f "${build}/curveprotect-${version}.tar.bz2" ] || ./do-tarbz2
+
+#create directory
+rm -rf "${build}/rpmbuild"
+
+mkdir -p "${build}/rpmbuild"
+(
+  cd "${build}/rpmbuild"
+  mkdir BUILD RPMS SOURCES SPECS SRPMS
+)
+
+sed "s/_VERSION_/${version}/g" contrib/curveprotect.spec | sed "s,_CURVEPROTECT_,${curveprotectdir},g" > "${build}/rpmbuild/SPECS/curveprotect.spec"
+cp "${build}/curveprotect-${version}.tar.bz2" "${build}/rpmbuild/SOURCES"
+(
+  cd "${build}"
+  if [ "`id -u`" -eq 0 ]; then
+    chown -R nobody "rpmbuild"
+    su -m -s /bin/sh -c 'env HOME="`pwd`" rpmbuild -ba rpmbuild/SPECS/curveprotect.spec' nobody
+  else
+    env HOME="`pwd`" rpmbuild -ba rpmbuild/SPECS/curveprotect.spec
+  fi
+) 
+
+cp "${build}/rpmbuild/SRPMS/curveprotect-${version}-1.src.rpm" "${build}"
+cp "${build}/rpmbuild/RPMS/`uname -m`/curveprotect-${version}-1.`uname -m`.rpm" "${build}"

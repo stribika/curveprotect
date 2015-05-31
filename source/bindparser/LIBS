@@ -1,0 +1,7 @@
+file_loader.o
+scanner.o
+scanner_functions.o
+errors.o
+errcode.o
+descriptor.o
+utils.o

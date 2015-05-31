@@ -1,0 +1,72 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_stats.css
+</style>
+
+
+<pre>
+statistics from: %TEMPLATE_VARIABLE_from%
+statistics to:   %TEMPLATE_VARIABLE_to%
+seconds:         %TEMPLATE_VARIABLE_seconds%
+url/s:           %TEMPLATE_VARIABLE_urls%
+</pre>
+
+<div class="line label">
+  <div class="name">requests</div>
+  <div class="value1"></div>
+  <div class="value2"></div>
+</div><div class="lineend"></div>
+
+<div class="line">
+  <div class="name">total</div>
+  <div class="value1">%TEMPLATE_VARIABLE_total%</div>
+  <div class="value2">%TEMPLATE_VARIABLE_totalvalue%%</div>
+</div><div class="lineend"></div>
+
+<div class="line">
+  <div class="name">HTTPCurve</div>
+  <div class="value1">%TEMPLATE_VARIABLE_curvehttp%</div>
+  <div class="value2">%TEMPLATE_VARIABLE_curvehttpvalue%%</div>
+</div><div class="lineend"></div>
+
+<div class="line warn">
+  <div class="name">HTTP</div>
+  <div class="value1">%TEMPLATE_VARIABLE_http%</div>
+  <div class="value2">%TEMPLATE_VARIABLE_httpvalue%%</div>
+</div><div class="lineend"></div>
+<div class="separator"></div>
+
+
+%TEMPLATE_BLOCKBEGIN_tables%
+<div class="line label">
+  <div class="name">%TEMPLATE_VARIABLE_name%</div>
+  <div class="value1"></div>
+  <div class="value2"></div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKBEGIN_xxxx%
+<div class="line">
+  <div class="name">%TEMPLATE_VARIABLE_key%</div>
+  <div class="value1"></div>
+  <div class="value2">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_xxxx%
+<div class="separator"></div>
+%TEMPLATE_BLOCKEND_tables%
+
+<div class="separator"></div>
+<div class="line label">
+  <div class="name">hourly average speed</div>
+  <div class="value1"></div>
+  <div class="value2">kB/s</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKBEGIN_speed%
+<div class="line">
+  <div class="name">%TEMPLATE_VARIABLE_date%</div>
+  <div class="value1"></div>
+  <div class="value2">%TEMPLATE_VARIABLE_latency%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_speed%
+
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html

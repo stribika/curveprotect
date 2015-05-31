@@ -1,0 +1,60 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>CURVEPROTECT plugin</title>
+
+<style type=text/css>
+body {
+  min-width: 300px; 
+  overflow: hidden;
+  font-size: 12px;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #000000;
+  margin: 0;
+  padding: 10px 10px 10px 10px;
+}
+
+h1 {
+  font-size: 16px;
+  color: #000000;
+  padding-bottom: 5px;
+  text-shadow: 1px 1px 1px #CCCCCC;
+}
+td {
+  font-size: 12px;
+}
+
+</style>
+
+<script type="text/javascript" src="defaults.js"></script>
+<script type="text/javascript">
+
+function loadOptions() {
+  document.getElementById('curveprotectProxyIp').value = localStorage["curveprotectProxyIp"] || defaultProxyIp;
+  document.getElementById('curveprotectProxyPort').value = localStorage["curveprotectProxyPort"] || defaultProxyPort;
+  document.getElementById('curveprotectProxyHeader').value = localStorage["curveprotectProxyHeader"] || defaultProxyHeader;
+}
+
+
+function saveOptions() {
+  localStorage["curveprotectProxyIp"] = document.getElementById('curveprotectProxyIp').value;
+  localStorage["curveprotectProxyPort"] = document.getElementById('curveprotectProxyPort').value;
+  localStorage["curveprotectProxyHeader"] = document.getElementById('curveprotectProxyHeader').value;
+}
+
+
+</script>
+</head>
+<body onload="loadOptions()">
+<h1>CURVEPROTECT PLUGIN SETINGS</h1>
+
+<form id="settings" onsubmit="saveOptions(); return false;">
+<table>
+<tr><td>httpproxy ip</td><td><input type="text" id="curveprotectProxyIp" name="curveprotectProxyIp" value=""/></td></tr>
+<tr><td>httpproxy port</td><td><input type="text" id="curveprotectProxyPort" name="curveprotectProxyPort" value=""/></td></tr> 
+<tr><td>httpproxy header</td><td><input type="text" id="curveprotectProxyHeader" name="curveprotectProxyHeader" value=""/></td></tr>
+<tr><td><input type="submit" id="submit" value="submit"/></td><td></td></tr>
+</table>
+</form>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+#sets CURVEPROTECTHOME using debhelper
+#DEBHELPER#
+
+
+if [ x"$1" != xpurge ]; then
+  if [ x"$1" != xremove ]; then
+    exit 0
+  fi
+fi
+
+if [ -x "${CURVEPROTECTHOME}/sbin/_postrm" ]; then
+  "${CURVEPROTECTHOME}/sbin/_postrm"
+fi
+exit 0

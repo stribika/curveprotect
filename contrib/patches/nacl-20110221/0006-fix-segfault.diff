@@ -1,0 +1,33 @@
+diff -Nur nacl-20110221/curvecp/curvecpclient.c nacl-20110221.new/curvecp/curvecpclient.c
+--- nacl-20110221/curvecp/curvecpclient.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221.new/curvecp/curvecpclient.c	2012-05-26 20:36:30.798210381 +0200
+@@ -96,6 +96,7 @@
+   long long j;
+   long long k;
+   long long d;
++  if (!x) return 0;
+   for (j = 0;j < 4 * NUMIP;++j) y[j] = 0;
+   ynum = 0;
+   while (ynum < 1000) {
+diff -Nur nacl-20110221/curvecp/curvecpserver.c nacl-20110221.new/curvecp/curvecpserver.c
+--- nacl-20110221/curvecp/curvecpserver.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221.new/curvecp/curvecpserver.c	2012-05-26 20:37:42.230414556 +0200
+@@ -90,6 +90,7 @@
+   long long k;
+   long long d;
+ 
++  if (!x) return 0;
+   for (k = 0;k < 4;++k) y[k] = 0;
+   for (k = 0;k < 4;++k) {
+     d = 0;
+diff -Nur nacl-20110221/curvecp/portparse.c nacl-20110221.new/curvecp/portparse.c
+--- nacl-20110221/curvecp/portparse.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221.new/curvecp/portparse.c	2012-05-26 20:36:12.381912660 +0200
+@@ -4,6 +4,7 @@
+ {
+   long long d = 0;
+   long long j;
++  if (!x) return 0; 
+   for (j = 0;j < 5 && x[j] >= '0' && x[j] <= '9';++j)
+     d = d * 10 + (x[j] - '0');
+   if (j == 0) return 0;

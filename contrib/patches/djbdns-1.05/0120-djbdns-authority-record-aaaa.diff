@@ -1,0 +1,46 @@
+diff -Nur djbdns-1.05.orig/query.c djbdns-1.05/query.c
+--- djbdns-1.05.orig/query.c	2013-05-18 19:54:49.115266828 +0200
++++ djbdns-1.05/query.c	2013-05-18 20:04:26.547290551 +0200
+@@ -429,7 +429,7 @@
+ 
+     if (!typematch(DNS_T_ANY,dtype) && !typematch(DNS_T_AXFR,dtype) && !typematch(DNS_T_CNAME,dtype) && !typematch(DNS_T_NS,dtype) && !typematch(DNS_T_PTR,dtype) && !typematch(DNS_T_A,dtype) && !typematch(DNS_T_MX,dtype)) {
+       byte_copy(key,2,dtype);
+-      cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
++      cached = cache_get(key,dlen + 2,&cachedlen,&ttl,&flagns);
+       if (cached && (cachedlen || byte_diff(dtype,2,DNS_T_ANY))) {
+ 	log_cachedanswer(d,dtype);
+ 	if (!rqa(z)) goto DIE;
+@@ -444,8 +444,22 @@
+ 	  cached += datalen;
+ 	  cachedlen -= datalen;
+ 	}
+-	cleanup(z);
+-	return 1;
++        if (!flagns || !byte_equal(dtype,2,DNS_T_AAAA)) {
++          cleanup(z);
++          return 1;
++        }
++        byte_copy(key,2,DNS_T_NS);
++        cached = cache_get(key,dlen + 2,&cachedlen,&ttl,0);
++        if (cached && (cachedlen || byte_diff(dtype,2,DNS_T_ANY))) {
++          pos = 0;
++          while (pos = dns_packet_getname(cached,cachedlen,pos,&t2)) {
++            if (!response_rstart(d,DNS_T_NS,ttl)) goto DIE;
++            if (!response_addname(t2)) goto DIE;
++            response_rfinish(RESPONSE_AUTHORITY);
++          }
++          cleanup(z);
++          return 1;
++        }
+       }
+     }
+   }
+@@ -762,7 +776,7 @@
+         log_rr(whichserver,t1,type,buf + pos,datalen,ttl);
+         ++i;
+       }
+-      save_finish(type,t1,ttl,0);
++      save_finish(type,t1,ttl,flagns && byte_equal(type,2,DNS_T_AAAA));
+     }
+ 
+     i = j;

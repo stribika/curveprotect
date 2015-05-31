@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+# 20110927
+# Jan Mojzis
+# Public domain.
+
+import sys, cgi, os, lib, check, ed25519
+
+try:
+        lib.limit_resources2()
+        q = cgi.parse()
+
+        if q['keytype'][0] not in ["ed25519"]:
+                raise ValueError("Sorry, only ed25519 keytype allowed")
+
+        name = q['name'][0].strip()
+        check.name(name)
+        fn = "%s/%s" % (lib.ed25519_keydir,name)
+
+        hexpk = q['pk'][0]
+        check.hexkey(hexpk)
+        pk = lib.fromhex(hexpk)
+        if len(pk) != 32:
+                raise ValueError("Sorry, ed25519 public-key length is wrong")
+
+        submit = q['submit'][0]
+        if submit == "import":
+                ed25519.makekey(pk, fn)
+
+        elif submit == "remove":
+                lib.recursiverrm(fn)
+        else:
+                raise ValueError("Unknown submit value")
+except:
+        lib.print_refresh_failed("ed25519keys")
+else:
+        lib.print_refresh_success("ed25519keys")
+

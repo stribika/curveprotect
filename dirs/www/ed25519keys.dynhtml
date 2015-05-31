@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+# 20110913
+# Jan Mojzis
+# Public domain.
+
+import os, lib, header, time, htmltemplate, sys
+
+
+def list_used_keys():
+        """
+        """
+
+        ret = {}
+
+        for d in os.listdir("etc"):
+                try:
+                        k = lib.openreadcloseescape("/etc/%s/env/ED25519KEYDIR" % d)
+                        b = os.path.basename(k)
+                except IOError:
+                        continue
+                else:
+                        ret[b] = 1
+
+        for d in os.listdir("etc/dnslocal/conf"):
+                try:
+                        k = lib.openreadcloseescape("etc/dnslocal/conf/%s/ed25519dir" % d)
+                        b = os.path.basename(k)
+                except IOError:
+                        continue
+                else:
+                        ret[b] = 1
+
+        return str(list(ret.keys()))
+
+
+
+try:
+        lib.limit_resources()
+
+        keydir = lib.ed25519_keydir
+        keys = lib.ed25519_keys()
+        keytype="ed25519"
+
+        t = htmltemplate.Template("html/ed25519keys.html")
+        d = header.header("ed25519keys")
+        d["keys"] = []
+        d["newkey"] = [{"keytype":keytype}]
+        d["usedkeys"] = list_used_keys()
+
+        #d["curvecp"] = [{}]
+        #d["dnscurve"] = []
+
+
+        for name in keys:
+
+                try:
+                        pkmtime = lib.getmtime("%s/%s/publickey" % (keydir,name))
+                        pkkey   = lib.tohex(lib.openreadclose("%s/%s/publickey" % (keydir,name)))
+
+                except:
+                        raise
+                        continue
+
+                tmp = {}
+                tmp["name"] = name
+                tmp["pk"] = str(pkkey)
+                tmp["tm"] = time.strftime('%Y.%m.%d %H:%M:%S',time.localtime(pkmtime))
+                tmp["keytype"] = keytype
+                
+                d["keys"].append(tmp)
+
+        t.write(d)
+
+except:
+        raise

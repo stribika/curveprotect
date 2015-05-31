@@ -1,0 +1,68 @@
+diff -Nur knot-1.3.3/src/libknot/util/utils.c knot-1.3.3.new/src/libknot/util/utils.c
+--- knot-1.3.3/src/libknot/util/utils.c	2013-10-29 08:43:27.000000000 +0100
++++ knot-1.3.3.new/src/libknot/util/utils.c	2013-12-21 16:57:06.025202000 +0100
+@@ -19,10 +19,13 @@
+ #include <pthread.h>
+ #include <fcntl.h>
+ #include <unistd.h>
++#include <strings.h>
+ 
+ #include "common.h"
+ #include "util/utils.h"
++#if 0
+ #include "common/prng.h"
++#endif
+ 
+ /*----------------------------------------------------------------------------*/
+ 
+@@ -54,6 +57,7 @@
+ 	return NULL;
+ }
+ 
++#if 0
+ /*----------------------------------------------------------------------------*/
+ 
+ uint16_t knot_random_id()
+@@ -71,3 +75,4 @@
+ 	ret.l_pid = getpid();
+ 	return &ret;
+ }
++#endif
+diff -Nur knot-1.3.3/src/libknot/util/utils.h knot-1.3.3.new/src/libknot/util/utils.h
+--- knot-1.3.3/src/libknot/util/utils.h	2013-10-29 08:43:27.000000000 +0100
++++ knot-1.3.3.new/src/libknot/util/utils.h	2013-12-21 16:56:16.151549000 +0100
+@@ -27,7 +27,9 @@
+ #ifndef _KNOT_UTILS_H_
+ #define _KNOT_UTILS_H_
+ 
++#if 0
+ #include "util/endian.h"
++#endif
+ #include <string.h>
+ #include <stdint.h>
+ #include <stdio.h>
+@@ -44,6 +46,7 @@
+ 
+ typedef struct knot_lookup_table knot_lookup_table_t;
+ 
++
+ /*!
+  * \brief Looks up the given name in the lookup table.
+  *
+@@ -68,6 +71,8 @@
+ knot_lookup_table_t *knot_lookup_by_id(knot_lookup_table_t *table,
+                                            int id);
+ 
++#if 0
++
+ /*
+  * Writing / reading arbitrary data to / from wireformat.
+  */
+@@ -189,6 +194,7 @@
+  * \return Locking structure.
+  */
+ struct flock* knot_file_lock(short type, short whence);
++#endif
+ 
+ #endif /* _KNOT_UTILS_H_ */
+ 

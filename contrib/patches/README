@@ -1,0 +1,6 @@
+patches are used against:
+djbdns-1.05
+ucspi-tcp-0.88
+nacl-20110221
+mdempsky-dnscurve commit fd16d683d3
+daemontools-0.76

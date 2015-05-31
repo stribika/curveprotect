@@ -1,0 +1,14 @@
+#!/bin/sh -e
+
+#sets CURVEPROTECTHOME using debhelper
+#DEBHELPER#
+
+if [ x"$1" != "xconfigure" ]; then
+  exit 0
+fi
+
+#copy scripts to sbin
+cp -p "${CURVEPROTECTHOME}/bin/_"* "${CURVEPROTECTHOME}/sbin"
+
+"${CURVEPROTECTHOME}/sbin/_postinst"
+exit 0

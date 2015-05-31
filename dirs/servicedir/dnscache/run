@@ -1,0 +1,13 @@
+#!/bin/sh
+exec 2>&1
+PATH="_CURVEPROTECT_/bin:${PATH}"
+export PATH
+
+exec extremeenvuidgid envdir _CURVEPROTECT_/etc/dnscache/env sh -c '
+  uidgidchown  "${ROOT}/dump" "${ROOT}/dump/dnsdata"
+  if [ x"${KEYDIR}" != x ]; then
+    exec envdir "${KEYDIR}" envdir "${KEYDIR}/.EXPERTSONLY" softlimit -o250 -d "${DATALIMIT}" dqcache
+  else
+    exec softlimit -o250 -d "${DATALIMIT}" dqcache
+  fi
+'

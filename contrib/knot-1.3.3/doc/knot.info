@@ -1,0 +1,2726 @@
+This is knot.info, produced by makeinfo version 4.13 from knot.texi.
+
+This manual is for Knot DNS (version 1.3.3, 29 October 2013), which is
+a high-performance authoritative-only DNS server.
+
+Copyright (C) 2012 CZ.NIC, z.s.p.o.
+
+     This program is free software: you can redistribute it and/or
+     modify it under the terms of the GNU General Public License as
+     published by the Free Software Foundation, either version 3 of the
+     License, or (at your option) any later version.
+
+     This program is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+     General Public License for more details.
+
+     You should have received a copy of the GNU General Public License
+     along with this program.  If not, see
+     <http://www.gnu.org/licenses/>.
+
+INFO-DIR-SECTION Internet-application/server
+START-INFO-DIR-ENTRY
+* Knot DNS: (Knot DNS) An authoritative-only DNS server
+END-INFO-DIR-ENTRY
+
+
+File: knot.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
+
+Knot DNS
+********
+
+This manual is for Knot DNS (version 1.3.3, 29 October 2013).
+
+* Menu:
+
+* Introduction::
+* Knot DNS Resource Requirements::
+* Knot DNS Installation::
+* Knot DNS Configuration::
+* Running Knot DNS::
+* Troubleshooting::
+* Statement Index::
+* Knot DNS Configuration Reference::
+
+ --- The Detailed Node Listing ---
+
+Introduction
+
+* What is Knot DNS::
+* Knot DNS features::
+* Scope of this document::
+
+Knot DNS Resource Requirements
+
+* Hardware requirements::
+* CPU requirements::
+* Memory requirements::
+* Supported operating system::
+
+Knot DNS Installation
+
+* Required build environment::
+* Required libraries::
+* Installation from the sources::
+* Installation from packages::
+
+Required libraries
+
+* Userspace RCU::
+
+Installation from the sources
+
+* Configuring and generating Makefiles::
+* Compilation::
+* Installation::
+
+Installation from packages
+
+* Installing Knot DNS packages on Debian::
+* Installing Knot DNS packages on Ubuntu::
+* Installing Knot DNS packages on Fedora::
+* Installing Knot DNS from ports on FreeBSD::
+
+Installing Knot DNS packages on Ubuntu
+
+* Adding official PPA repository for Knot DNS::
+
+Knot DNS Configuration
+
+* Minimal configuration::
+* Slave configuration::
+* Master configuration::
+* Configuring multiple interfaces::
+
+Sample Configurations
+
+* Minimal configuration::
+* Slave configuration::
+* Master configuration::
+* Configuring multiple interfaces::
+* Enabling zone semantic checks::
+* Creating IXFR differences from zone file changes::
+
+Running Knot DNS
+
+* Running a slave server::
+* Running a master server::
+* Controlling running daemon::
+
+Troubleshooting
+
+* Submitting a bugreport::
+* Generating backtrace::
+* Debug messages::
+
+Debug messages
+
+* Enabling debug messages in server::
+
+Enabling debug messages in server
+
+* Example::
+
+Knot DNS Configuration Reference
+
+* system::
+* keys::
+* interfaces::
+* remotes::
+* groups::
+* zones::
+* log::
+* include::
+
+`system' Statement
+
+* system Syntax::
+* system Statement Definition and Usage::
+* system Example::
+
+Statement Definition and Usage
+
+* identity::
+* version::
+* nsid::
+* storage::
+* rundir::
+* pidfile::
+* workers::
+* user::
+* max-conn-idle::
+* max-conn-hs::
+* max-conn-reply::
+* rate-limit::
+* rate-limit-size::
+* rate-limit-slip::
+
+`keys' Statement
+
+* keys Syntax::
+* keys Statement Definition and Usage::
+* Example::
+
+Statement Definition and Usage
+
+* key_id::
+
+interfaces
+
+* interfaces Syntax::
+* interfaces Statement Definition and Usage::
+* interfaces Examples::
+
+Statement Definition and Usage
+
+* interface_id::
+
+`remotes' Statement
+
+* remotes Syntax::
+* remotes Statement Definition and Grammar::
+
+`groups' Statement
+
+* groups Syntax::
+* groups Statement Definition and Grammar::
+
+`zones' Statement
+
+* zones Syntax::
+* zones Statement Definition and Grammar::
+* zones List of zone semantic checks::
+
+`log' Statement
+
+* log Syntax::
+* log Statement Definition and Grammar::
+
+`include' Statement
+
+* include Syntax::
+
+
+File: knot.info,  Node: Introduction,  Next: Knot DNS Resource Requirements,  Prev: Top,  Up: Top
+
+1 Introduction
+**************
+
+The reader of this document is assumed to know the principles of Domain
+Name System.
+
+* Menu:
+
+* What is Knot DNS::
+* Knot DNS features::
+* Scope of this document::
+
+
+File: knot.info,  Node: What is Knot DNS,  Next: Knot DNS features,  Up: Introduction
+
+1.1 What is Knot DNS
+====================
+
+Knot DNS is a high-performance open source DNS server. It implements
+only authoritative domain name service. Knot DNS is best suited for use
+on TLD domains but can reliably serve any other zones as well.
+
+Knot DNS benefits from its multi-threaded and mostly lock-free
+implementation which allows it to scale well on SMP systems and operate
+non-stop even when adding or removing zones.
+
+
+File: knot.info,  Node: Knot DNS features,  Next: Scope of this document,  Prev: What is Knot DNS,  Up: Introduction
+
+1.2 Knot DNS features
+=====================
+
+Knot DNS supports the following DNS features:
+
+   * TCP/UDP protocols
+
+   * AXFR - master, slave
+
+   * IXFR - master (primary master experimental), slave
+
+   * TSIG
+
+   * ENDS0
+
+   * DNSSEC, including NSEC3
+
+   * NSID
+
+   * Unknown RR types
+
+Server features:
+
+   * Adding/removing zones on-the-fly
+
+   * Reconfiguring server instance on-the-fly
+
+   * IPv4 / IPv6 support
+
+   * Semantic checks of zones
+
+For more info and downloads see www.knot-dns.cz
+(http://www.knot-dns.cz).
+
+Git repository: git://git.nic.cz/knot-dns.git
+(git://git.nic.cz/knot-dns.git)
+
+Git repository browser: gitlab.labs.nic.cz/knot/tree/master
+(https://gitlab.labs.nic.cz/knot/tree/master)
+
+Knot DNS issue tracker: gitlab.labs.nic.cz/knot/issues
+(https://gitlab.labs.nic.cz/knot/issues)
+
+Knot DNS users mailing list: knot-dns-users@lists.nic.cz
+(mailto:knot-dns-users@lists.nic.cz)
+
+
+File: knot.info,  Node: Scope of this document,  Prev: Knot DNS features,  Up: Introduction
+
+1.3 Scope of this document
+==========================
+
+This document covers the basic information on installing, configuring
+and troubleshooting the Knot DNS server.
+
+
+File: knot.info,  Node: Knot DNS Resource Requirements,  Next: Knot DNS Installation,  Prev: Introduction,  Up: Top
+
+2 Knot DNS Resource Requirements
+********************************
+
+* Menu:
+
+* Hardware requirements::
+* CPU requirements::
+* Memory requirements::
+* Supported operating system::
+
+
+File: knot.info,  Node: Hardware requirements,  Next: CPU requirements,  Up: Knot DNS Resource Requirements
+
+2.1 Hardware requirements
+=========================
+
+Knot DNS requirements are not very demanding for typical installations,
+and a commodity server or a virtual solution will be sufficient in most
+cases.
+
+However please note that there are some scenarios that will require
+administrator attention and testing of exact requirements before
+deploying Knot DNS in production. These cases include deployment for a
+large number of zones (DNS hosting), a large number of records in one
+or more zones (TLD) or large number of requests.
+
+
+File: knot.info,  Node: CPU requirements,  Next: Memory requirements,  Prev: Hardware requirements,  Up: Knot DNS Resource Requirements
+
+2.2 CPU requirements
+====================
+
+Knot DNS scales with processing power and also with the number of
+available cores/CPUs.
+
+There is no lower bound on the CPU requirements, but it should support
+memory barriers and CAS (i586 and newer).
+
+
+File: knot.info,  Node: Memory requirements,  Next: Supported operating system,  Prev: CPU requirements,  Up: Knot DNS Resource Requirements
+
+2.3 Memory requirements
+=======================
+
+Knot DNS implementation focuses on performance and thus can be quite
+demanding for memory.  The rough estimate for memory requirements is
+5-7 times of the size of the zone in text format.  Again this is only
+an estimate and you are advised to do your own measurements before
+deploying Knot DNS into production.
+
+Also note that to ensure uninterrupted serving of the zone, Knot DNS
+employs a Read-Copy-Update mechanism instead of locking and thus
+requires twice the amount of memory for the duration of incoming
+transfers.
+
+
+File: knot.info,  Node: Supported operating system,  Prev: Memory requirements,  Up: Knot DNS Resource Requirements
+
+2.4 Supported operating system
+==============================
+
+Knot DNS itself is written in a portable way, but it depends on several
+libraries. Namely userspace-rcu, which could be a constraint when it
+comes to the operating system support.  As far as we know the Knot DNS
+can be compiled and run on Linux, FreeBSD, OpenBSD, NetBSD and Mac OS X.
+
+
+File: knot.info,  Node: Knot DNS Installation,  Next: Knot DNS Configuration,  Prev: Knot DNS Resource Requirements,  Up: Top
+
+3 Knot DNS Installation
+***********************
+
+* Menu:
+
+* Required build environment::
+* Required libraries::
+* Installation from the sources::
+* Installation from packages::
+
+
+File: knot.info,  Node: Required build environment,  Next: Required libraries,  Up: Knot DNS Installation
+
+3.1 Required build environment
+==============================
+
+GCC at least 4.1 is strictly required for atomic built-ins, but 4.2 or
+newer is recommended.  Another requirement is `_GNU_SOURCE' support,
+otherwise it adapts to the compiler available features.  Clang should
+work, but it is not officially supported.
+
+Knot DNS build system relies on these standard tools:
+   * make
+
+   * libtool
+
+   * autoconf >= 2.65
+
+   * flex >= 2.5.31
+
+   * bison >= 2.3
+
+   * ragel >= 6.7 (only required for fast zone parsing)
+
+
+File: knot.info,  Node: Required libraries,  Next: Installation from the sources,  Prev: Required build environment,  Up: Knot DNS Installation
+
+3.2 Required libraries
+======================
+
+Knot DNS requires few libraries to be compiled:
+
+   * OpenSSL, at least 0.9.8
+
+   * zlib
+
+   * Userspace RCU, at least 0.5.4
+
+   * libcap-ng, at least 0.6.4 (optional library)
+
+If libcap-ng library is available, Knot DNS will take advantage of the
+POSIX 1003.1e capabilites(7) by sandboxing the exposed threads.  Most
+rights are stripped from the exposed threads for security reasons.
+
+You can probably find OpenSSL and zlib libraries already included in
+your system or distribution.  If not, zlib resides at
+`http://zlib.net', and OpenSSL can be found at `http://www.openssl.org'.
+
+* Menu:
+
+* Userspace RCU::
+
+
+File: knot.info,  Node: Userspace RCU,  Up: Required libraries
+
+3.2.1 Userspace RCU
+-------------------
+
+liburcu is a LGPLv2.1 userspace RCU (read-copy-update) library. This
+data synchronization library provides read-side access which scales
+linearly with the number of cores. It does so by allowing multiple
+copies of a given data structure to live at the same time, and by
+monitoring the data structure accesses to detect grace periods after
+which memory reclamation is possible.  (Userspace RCU
+(http://lttng.org/urcu))
+
+Binary packages for Debian can be found under `liburcu1' for the
+library and `liburcu-dev' for development files.
+
+Minimum supported version of Userspace RCU library is 0.5.4, but we
+recommend using latest available version.  It is crucial especially on
+non-Linux systems, as we got some compatibility patches accepted to
+later releases of Userspace RCU.  OpenBSD, NetBSD and OS X platforms
+are supported from version 0.7.0.
+
+
+File: knot.info,  Node: Installation from the sources,  Next: Installation from packages,  Prev: Required libraries,  Up: Knot DNS Installation
+
+3.3 Installation from the sources
+=================================
+
+You can find the source files for the latest release on
+`www.knot-dns.cz'.  Alternatively, you can fetch the sources from git
+repository `git://git.nic.cz/knot-dns.git'
+
+After unpacking the sources, the compilation and installation is a
+quite straightforward process using autotools.
+
+* Menu:
+
+* Configuring and generating Makefiles::
+* Compilation::
+* Installation::
+
+
+File: knot.info,  Node: Configuring and generating Makefiles,  Next: Compilation,  Up: Installation from the sources
+
+3.3.1 Configuring and generating Makefiles
+------------------------------------------
+
+If you want to compile from Git sources, you need to bootstrap the
+`./configure' file first.
+
+     $ autoreconf -i -f
+
+For all available configure options run:
+
+     $ ./configure --help
+
+If you have trouble with unknown syscalls under valgrind, disable
+recvmmsg by adding a parameter `--enable-recvmmsg=no' to configure.
+
+If you want to load huge zone files quickly, enable fast zone parser by
+adding a parameter `--enable-fastparser' to configure. In this case
+Ragel compiler is required.
+
+Knot DNS has also support for link time optimizations.  You can enable
+it by the configure parameter `./configure --enable-lto=yes'.  It is
+however disabled by default as it is known to be broken in some compiler
+versions and may result in an unexpected behaviour.
+
+If you want to add debug messages, there are two steps to do that.
+First you have to enable modules you are interested in.  Available are:
+`server, zones, xfr, packet, dname, rr, ns, hash, compiler'.  You can
+combine multiple modules as a comma-separated list.  Then you can
+narrow the verbosity of the debugging message by specifying the
+verbosity as `brief, verbose, details'.
+
+For example:
+     $ ./configure --enable-debug=server,packet --enable-debuglevel=brief
+     $ ./configure --enable-debug=server,packet --enable-debuglevel=verbose
+
+For more detailed information, see *note Debug messages::.
+
+In most simple case you can just run configure without any options.
+
+     $ ./configure
+
+
+File: knot.info,  Node: Compilation,  Next: Installation,  Prev: Configuring and generating Makefiles,  Up: Installation from the sources
+
+3.3.2 Compilation
+-----------------
+
+After running `./configure' you can compile Knot DNS by running `make'
+command, which will produce binaries and other related files.
+
+     $ make
+
+Knot DNS build process is safe to parallelize using `make -j N', where
+N is number of concurrent processes.  Using this option can increase
+speed of the compilation.
+
+For example to use maximum 8 concurrent processes you would use:
+
+     $ make -j 8
+
+
+File: knot.info,  Node: Installation,  Prev: Compilation,  Up: Installation from the sources
+
+3.3.3 Installation
+------------------
+
+When you have finished building the Knot DNS, it's time to install the
+binaries and configuration files into the operation system hierarchy.
+You can do so by executing `make install' command.  When installing as a
+non-root user you might have to gain elevated privileges by switching
+to root user, e.g. `sudo make install' or `su -c 'make install''.
+
+     $ make install
+
+
+File: knot.info,  Node: Installation from packages,  Prev: Installation from the sources,  Up: Knot DNS Installation
+
+3.4 Installation from packages
+==============================
+
+In addition to providing the packages in .DEB and .RPM format, the Knot
+DNS might already be available in your favourite distribution, or in a
+ports tree.
+
+* Menu:
+
+* Installing Knot DNS packages on Debian::
+* Installing Knot DNS packages on Ubuntu::
+* Installing Knot DNS packages on Fedora::
+* Installing Knot DNS from ports on FreeBSD::
+
+
+File: knot.info,  Node: Installing Knot DNS packages on Debian,  Next: Installing Knot DNS packages on Ubuntu,  Up: Installation from packages
+
+3.4.1 Installing Knot DNS packages on Debian
+--------------------------------------------
+
+Knot DNS is already available from Debian wheezy upwards.  In addition
+to the official packages we also provide custom repository, which can
+be used by adding:
+
+     deb     `http://deb.knot-dns.cz/debian/' <codename> main
+     deb-src `http://deb.knot-dns.cz/debian/' <codename> main
+
+to your `/etc/apt/sources.list' or into separate file in
+`/etc/apt/sources.list.d/'.
+
+As an example, for Debian squeeze (current stable) the Knot DNS
+packages can be added by executing following command as the root user.
+
+
+     $ cat >/etc/apt/sources.list.d/knot.list <<EOF
+     deb     http://deb.knot-dns.cz/debian/ <codename> main
+     deb-src http://deb.knot-dns.cz/debian/ <codename> main
+     EOF
+     $ apt-get update
+     $ apt-get install knot
+
+
+File: knot.info,  Node: Installing Knot DNS packages on Ubuntu,  Next: Installing Knot DNS packages on Fedora,  Prev: Installing Knot DNS packages on Debian,  Up: Installation from packages
+
+3.4.2 Installing Knot DNS packages on Ubuntu
+--------------------------------------------
+
+Prepackaged version of the Knot DNS can be found in Ubuntu from version
+12.10 (Quantal Quetzal).  In addition to the package included in the
+main archive, we provide Personal Package Archive (PPA) as an option to
+upgrade to last stable version of the Knot DNS or to install it on
+older versions of Ubuntu Linux.
+
+We typically provide packages for all supported versions of Ubuntu
+Linux including 5 year support for LTS (https://wiki.ubuntu.com/LTS)
+versions of Ubuntu Linux.  At the time of writing this manual this
+includes Ubuntu 10.04 LTS, 11.04, 11.10 and 12.04 LTS.
+
+* Menu:
+
+* Adding official PPA repository for Knot DNS::
+
+
+File: knot.info,  Node: Adding official PPA repository for Knot DNS,  Up: Installing Knot DNS packages on Ubuntu
+
+3.4.2.1 Adding official PPA repository for Knot DNS
+...................................................
+
+To start installing and using software from a Personal Package Archive,
+you first need to tell Ubuntu where to find the PPA.
+
+
+     $ sudo add-apt-repository ppa:cz.nic-labs/knot-dns
+     $ sudo apt-get update
+     $ sudo apt-get install knot
+
+Running this sequence of commands will ensure that you will install
+Knot DNS on your system and keep it up-to-date in the future, when new
+versions are released.
+
+
+File: knot.info,  Node: Installing Knot DNS packages on Fedora,  Next: Installing Knot DNS from ports on FreeBSD,  Prev: Installing Knot DNS packages on Ubuntu,  Up: Installation from packages
+
+3.4.3 Installing Knot DNS packages on Fedora
+--------------------------------------------
+
+The RPM packages for `Knot DNS' are available in official Fedora
+repositories since Fedora 18 (Spherical Cow). Look for `knot' package
+in your package manager. To install the package using Yum, run a
+following command as the root user:
+
+
+     # yum install knot
+
+Using official distribution repository is highly recommended, however
+you may want to run `Knot DNS' on older releases of Fedora. In this
+case you can set up an unofficial repository by creating
+`/etc/yum.repos.d/knot.conf' file with the following content:
+
+
+     [knot]
+     name=Network.CZ Repository
+     baseurl=ftp://repo.network.cz/pub/redhat/
+     enabled=1
+     gpgcheck=0
+     gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-network.cz
+
+After performing this action, you can install `knot' package the same
+way as described above. Please note that the unofficial repository
+contains only builds for i686 and x86_64 architecture.
+
+When upgrading to Fedora 18 or higher, backup the configuration and
+switch to the latest package provided in the official repository by
+running the following command as the root user:
+
+
+     # yum distro-sync knot
+
+
+File: knot.info,  Node: Installing Knot DNS from ports on FreeBSD,  Prev: Installing Knot DNS packages on Fedora,  Up: Installation from packages
+
+3.4.4 Installing Knot DNS from ports on FreeBSD
+-----------------------------------------------
+
+Knot DNS is in ports tree under `dns/knot'.
+
+     $ cd /usr/ports/dns/knot
+     $ sudo make install
+
+
+File: knot.info,  Node: Knot DNS Configuration,  Next: Running Knot DNS,  Prev: Knot DNS Installation,  Up: Top
+
+4 Knot DNS Configuration
+************************
+
+In this chapter we provide suggested configurations and explain the
+meaning of individual configuration options.
+
+* Menu:
+
+* Minimal configuration::
+* Slave configuration::
+* Master configuration::
+* Configuring multiple interfaces::
+* Using DNS UPDATE::
+* Remote control interface::
+* Enabling zone semantic checks::
+* Creating IXFR differences from zone file changes::
+* Using Response Rate Limiting::
+
+
+File: knot.info,  Node: Minimal configuration,  Next: Slave configuration,  Up: Knot DNS Configuration
+
+4.1 Minimal configuration
+=========================
+
+The following configuration presents a minimal configuration file which
+can be used as a base for your Knot DNS setup.
+
+
+     # This is a sample of a minimal configuration file for Knot DNS.
+     #
+     # For exhaustive list of all options see samples/knot.full.conf
+     # in the source directory.
+     #
+
+     system {
+       storage "/var/lib/knot";
+     }
+
+     interfaces {
+       my_interface { address 127.0.0.1@53; }
+       second_int { address ::1; }
+     }
+
+     log {
+       syslog { any notice, warning, error; }
+     }
+
+     zones {
+       example.com {
+         file "/etc/knot/example.com";
+       }
+     }
+
+Now let's go step by step through this minimal configuration file:
+
+  1. In `system' statement we have configured `storage' directory where
+     Knot DNS will store slave zones and journal files.  (See *note
+     system:: and *note storage::)
+
+  2. The `interfaces' statement defines interfaces where Knot DNS will
+     listen for incoming connections. We have defined two interfaces:
+     one IPv4 called `my_interface' explicitly listening on port 53 and
+     second IPv6 called `second_int' also listening on port 53, which
+     is the default port for the DNS. See *note interfaces::.
+
+  3. The `log' statement defines the log facilities for Knot DNS.  In
+     this example we told Knot DNS to send its log messages with the
+     severities `debug', `warning' and `notice' into the syslog.  If
+     you omit this sections, all severities will printed to either
+     `stdout' or `stderr', and the severities from the `warning' and
+     more serious to syslog. You can find all possible combinations in
+     the *note log::.
+
+  4. The `zones' statement is probably the most important one, because
+     it defines the zones that Knot DNS will serve.  In its most simple
+     form you can define a zone by its name and zone file.
+
+
+File: knot.info,  Node: Slave configuration,  Next: Master configuration,  Prev: Minimal configuration,  Up: Knot DNS Configuration
+
+4.2 Slave configuration
+=======================
+
+Knot DNS doesn't strictly differ between master and slave zones.  The
+only requirement is to have `xfr-in' `zones' statement set for given
+zone, thus allowing both incoming XFR from that remote and using it as
+the zone master. If `update-in' is set and zone has a master, any
+accepted DNS UPDATE will be forwarded to master.  Also note that you
+need to explicitly allow incoming NOTIFY, otherwise the daemon would
+reject them.  Also, you can specify paths, relative to the storage
+directory.  See *note zones:: and *note storage::.  If the zone file
+doesn't exist and `xfr-in' is set, it will be bootstrapped over AXFR.
+
+     remotes {
+       master { address 127.0.0.1@53; }
+       subnet1 { address 192.168.1.0/24; }
+     }
+     zones {
+       example.com {
+         file "example.com"; # relative to 'storage'
+         xfr-in master;      # define 'master' for this zone
+         notify-in master;   # also allow NOTIFY from 'master'
+         update-in subnet1;  # accept UPDATE msgs from subnet1 and forward
+                             # to master
+       }
+     }
+
+You can also use TSIG for access control. For this, you need to
+configure a TSIG key and assign it to a remote.  Supported algorithms
+for TSIG key are:
+`hmac-md5, hmac-sha1, hmac-sha224, hmac-sha256, hmac-sha384,
+hmac-sha512'
+Key secret is written in a base64 encoded format. See *note keys::.
+
+     keys {
+       key0 hmac-md5 "Wg=="; # keyname algorithm secret
+     }
+     remotes {
+       master { address 127.0.0.1@53; key key0; }
+     }
+     zones {
+       example.com {
+         file "example.com"; # relative to 'storage'
+         xfr-in master;      # define 'master' for this zone
+         notify-in master;   # also allow NOTIFY from 'master'
+       }
+     }
+
+As of now it is not possible to associate multiple keys with a remote.
+
+
+File: knot.info,  Node: Master configuration,  Next: Configuring multiple interfaces,  Prev: Slave configuration,  Up: Knot DNS Configuration
+
+4.3 Master configuration
+========================
+
+You can specify which remotes to allow for outgoing XFR and NOTIFY
+`zones'.
+
+     remotes {
+       slave { address 127.0.0.1@53; }
+       any { address 0.0.0.0/0; }
+       subnet1 { address 192.168.1.0/8; }
+       subnet2 { address 192.168.2.0/8; }
+     }
+     zones {
+       example.com {
+         file "/var/zones/example.com";
+         xfr-out subnet1, subnet2; # allow outgoing transfers
+         notify-out slave;
+         update-in subnet1; # only allow DNS UPDATE from subnet1
+       }
+     }
+
+You can also secure outgoing XFRs with TSIG.
+
+     keys {
+       key0 hmac-md5 "Wg=="; # keyname algorithm secret
+     }
+     remotes {
+       any { address 0.0.0.0/0; key key0; }
+     }
+     zones {
+       example.com {
+         file "/var/zones/example.com";
+         xfr-out any; # uses 'any' remote secured with TSIG key 'key0'
+       }
+     }
+
+
+File: knot.info,  Node: Configuring multiple interfaces,  Next: Using DNS UPDATE,  Prev: Master configuration,  Up: Knot DNS Configuration
+
+4.4 Configuring multiple interfaces
+===================================
+
+Knot DNS support binding to multiple available interfaces in the
+`interfaces' section.
+You can also use the special addresses for "any address" like `0.0.0.0'
+or `[::]'.
+
+     interfaces {
+       if1 { address 192.168.1.2@53; }
+       anyv6 { address [::]@53; }
+     }
+
+
+File: knot.info,  Node: Using DNS UPDATE,  Next: Remote control interface,  Prev: Configuring multiple interfaces,  Up: Knot DNS Configuration
+
+4.5 Using DNS UPDATE
+====================
+
+As noted in examples for master and slave, it is possible to accept DNS
+UPDATE messages.  When the zone is configured as a slave and DNS UPDATE
+messages is accepted, server forwards the message to its primary master
+specified by `xfr-in' directive. When it receives the response from
+primary master, it forwards it back to the originator. This finishes
+the transaction.
+
+However, if the zone is configured as master (i.e. not having any
+`xfr-in' directive), it accepts such an UPDATE and processes it. As of
+1.2, there are a few limitations with DNSSEC signed zones described
+below. Other than that, UPDATE of unsigned zones works as expected
+without any limitations.
+
+   * Knot DNS doesn't automatically sign incoming RR if the zone is
+     signed.  As a workaround, it accepts DNSSEC-related records.
+     However, it may prove challenging to create such an UPDATE that it
+     correctly adds/replaces signed RRs, so this feature should be
+     treated as experimental until correct signing is implemented.
+
+   * As for the reason in a previous point, removing RRSIG with no
+     specified rdata makes it impossible to determine whether the user
+     meant a RRSIG for an NSEC3 record or other one.  Since they are
+     stored separately, it is advisable to always specify RRSIG along
+     with at least the types it covers.
+
+   * Deleting a last RR also removes its RRSIG.
+
+
+
+File: knot.info,  Node: Remote control interface,  Next: Enabling zone semantic checks,  Prev: Using DNS UPDATE,  Up: Knot DNS Configuration
+
+4.6 Remote control interface
+============================
+
+As of v1.3.0, it is possible to control running daemon using UNIX
+sockets, which is also preferred over internet sockets. You don't need
+any specific configuration, since it is enabled by default and the UNIX
+socket is placed in the rundir.  To disable remote control completely,
+add an empty `control' section to the configuration like:
+
+     control { }
+
+However you can still use IPv4/IPv6 address, although with several
+shortcomings.  You then can use `allow' for an ACL list similar to
+`xfr-in' or `xfr-out', see that for syntax reference. The `listen-on'
+has syntax equal to an interface specification, but the default port
+for remote control protocol is `5533'.  However keep in mind, that the
+transferred data isn't encrypted and could be susceptible to replay
+attack in a short timeframe.
+
+Example configuration:
+     control {
+     	listen-on { address 127.0.0.1@5533; }
+     }
+
+
+File: knot.info,  Node: Enabling zone semantic checks,  Next: Creating IXFR differences from zone file changes,  Prev: Remote control interface,  Up: Knot DNS Configuration
+
+4.7 Enabling zone semantic checks
+=================================
+
+You can turn on more detailed semantic checks of zone file in this
+`zones' statement (*note zones::). Refer to *note zones List of zone
+semantic checks:: to see which checks are enabled by default and which
+are optional.
+
+
+File: knot.info,  Node: Creating IXFR differences from zone file changes,  Next: Using Response Rate Limiting,  Prev: Enabling zone semantic checks,  Up: Knot DNS Configuration
+
+4.8 Creating IXFR differences from zone file changes
+====================================================
+
+If Knot is being run as a master server, experimental feature
+`ixfr-from-differences' can be enabled to create IXFR differences from
+changes made to the master zone file.  See *note Controlling running
+daemon:: for more information. For more about `zones' statement see
+*note zones::.
+
+
+File: knot.info,  Node: Using Response Rate Limiting,  Prev: Creating IXFR differences from zone file changes,  Up: Knot DNS Configuration
+
+4.9 Using Response Rate Limiting
+================================
+
+Response rate limiting (RRL) is a method to combat recent DNS
+reflection amplification attacks.  These attacked rely on the fact that
+source address of a UDP query could be forged, and without a worldwide
+deployment of BCP38, such a forgery could not be detected.  Attacker
+could then exploit DNS server responding to every query, potentially
+flooding the victim with a large unsolicited DNS responses.
+
+As of Knot DNS version 1.2.0, RRL is compiled in, but disabled by
+default.  You can enable it with the *note rate-limit:: option in the
+*note system:: section.  Setting to a value greater than `0' means that
+every flow is allowed N responses per second, (i.e. `rate-limit 50;'
+means `50' responses per second).  It is also possible to configure
+SLIP interval, which causes every Nth blocked response to be slipped as
+a truncated response. Not that some error responses cannot be truncated
+and are slipped as-is.  For more information, refer to *note
+rate-limit-slip::.  It is advisable to not set slip interval to a value
+larger than 1.
+
+Example configuration:
+     system {
+     	rate-limit 200;    # Each flow is allowed to 200 resp. per second
+     	rate-limit-slip 1; # Every response is slipped (default)
+     }
+
+
+File: knot.info,  Node: Running Knot DNS,  Next: Troubleshooting,  Prev: Knot DNS Configuration,  Up: Top
+
+5 Running Knot DNS
+******************
+
+* Menu:
+
+* Running a slave server::
+* Running a master server::
+* Controlling running daemon::
+
+Knot DNS can run either in the foreground or in a background, with the
+`-d' option. When run in foreground, it doesn't create a PID file.
+Other than that, there are no differences and you can control it just
+the same way.
+     Usage: knotd [parameters]
+
+     Parameters:
+      -c, --config [file] Select configuration file.
+      -d, --daemonize     Run server as a daemon.
+      -v, --verbose       Verbose mode - additional runtime information.
+      -V, --version       Print version of the server.
+      -h, --help          Print help and usage.
+
+Use knotc tool for convenience when working with the server daemon.  As
+of Knot DNS 1.3.0, the zones are not compiled anymore. That makes
+working with the server much more user friendly.
+     $ knotc -c knot.conf reload
+
+The tool `knotc' is designed as a front-end for user, making it easier
+to do everything from server startup to state checking of a running
+server daemon.  If you want to control the daemon directly, use
+`SIGINT' to quit the process or `SIGHUP' to reload configuration.
+
+     Usage: knotc [parameters] <action> [action_args]
+
+     Parameters:
+      -c [file], --config=[file] Select configuration file.
+      -s [server]                Remote UNIX socket/IP address
+                                   (default ${rundir}/knot.sock).
+      -p [port]                  Remote server port (only for IP).
+      -y [[hmac:]name:key]       Use key_id specified on the command line.
+      -k [file]                  Use key file (as in config section 'keys').
+                                   Example:
+                                   echo "knotc-key hmac-md5 Wg==" > knotc.key
+      -f, --force                Force operation - override some checks.
+      -v, --verbose              Verbose mode - additional runtime
+                                 information.
+      -V, --version              Print knot server version.
+      -i, --interactive          Interactive mode (do not daemonize).
+      -h, --help                 Print help and usage.
+
+     Actions:
+      stop                       Stop server.
+      reload                     Reload configuration and changed zones.
+      refresh [zone]             Refresh slave zone (all if not specified).
+      flush                      Flush journal and update zone files.
+      status                     Check if server is running.
+      zonestatus                 Show status of configured zones.
+      checkconf                  Check current server configuration.
+      checkzone [zone]           Check zone (all if not specified).
+      memstats [zone]            Estimate memory consumption for zone
+                                   (all if not specified).
+
+Also, the server needs to create several files in order to run
+properly. These files are stored in the folowing directories.
+
+`storage' (*note storage::):
+
+   * _Zone files_ - default directory for storing zone files. This can
+     be overriden using absolute zone file location.
+
+   * _Journal files_ - each zone has a journal file to store
+     differences for IXFR and dynamic updates. Journal for zone
+     `example.com' will be placed in `example.com.diff.db'.
+
+`rundir' (*note rundir::):
+
+   * _PID file_ - is created automatically when the server is run in
+     background.
+
+   * _Control sockets_ - as a default, UNIX sockets are created here,
+     but this can be overriden.
+
+
+File: knot.info,  Node: Running a slave server,  Next: Running a master server,  Up: Running Knot DNS
+
+5.1 Running a slave server
+==========================
+
+Running the server as a slave is very straightforward as you usually
+bootstrap zones over AXFR and thus avoid any manual zone compilation.
+In contrast to AXFR, when the incremental transfer finishes, it stores
+the differences in a journal file and doesn't update the zone file
+immediately.  There is a timer that checks periodically for new
+differences and updates the zone file. You can configure this timer
+with the `zonefile-sync' statement in `zones' (*note zones::).
+
+There are two ways to start the server - in foreground or background.
+First, let's start in foreground. If you do not pass any configuration,
+it will try to search configuration in default path that is
+`SYSCONFDIR/knot.conf'. The `SYSCONFDIR' depends on what you passed to
+the `./configure', usually `/etc'.
+
+     $ knotd -c slave.conf
+
+To start it as a daemon, just add a `-d' parameter. Unlike the
+foreground mode, PID file will be created in `rundir' directory.
+
+     $ knotd -d -c slave.conf # start the daemon
+     $ knotc -c slave.conf stop # stop the daemon
+
+When the server is running, you can control the daemon, see *note
+Controlling running daemon::.
+
+
+File: knot.info,  Node: Running a master server,  Next: Controlling running daemon,  Prev: Running a slave server,  Up: Running Knot DNS
+
+5.2 Running a master server
+===========================
+
+If you want to just check the zone files first before starting, you can
+use `knotc checkzone' action.
+     $ knotc -c master.conf checkzone example.com
+
+For an approximate estimate of server's memory consumption, you can use
+the `knotc memstats' action.  This action prints count of resource
+records, percentage of signed records and finally estimation of memory
+consumption for each zone, unless specified otherwise. Please note that
+estimated values might differ from the actual consumption. Also, for
+slave servers with incoming transfers enabled, be aware that the actual
+memory consumption might be double or more during transfers.
+
+     $ knotc -c master.conf memstats example.com
+
+Starting and stopping the daemon is the same as with the slave server
+in the previous section.
+
+
+File: knot.info,  Node: Controlling running daemon,  Prev: Running a master server,  Up: Running Knot DNS
+
+5.3 Controlling running daemon
+==============================
+
+Knot DNS was designed to allow server reconfiguration on-the-fly
+without interrupting its operation. Thus it is possible to change both
+configuration and zone files and also add or remove zones without
+restarting the server. This can be done with the `knotc reload' action.
+
+     $ knotc -c master.conf reload  # reconfigure and load updated zones
+
+If you want _IXFR-out_ differences created from changes you make to a
+zone file, enable *note ixfr-from-differences:: in `zones' statement,
+then reload your server as seen above.  If _SOA_'s _serial_ is not
+changed no differences will be created. Please note that this feature
+is in _experimental_ stage and should be used with care.  If you
+encounter a bug using this feature, please send it to Knot developers
+(*note Submitting a bugreport::).
+
+If you want to force refresh the slave zones, you can do this with the
+`knotc refresh' action.
+     $ knotc -c slave.conf refresh
+
+For a complete list of actions refer to `knotc --help' command output.
+
+
+File: knot.info,  Node: Troubleshooting,  Next: Statement Index,  Prev: Running Knot DNS,  Up: Top
+
+6 Troubleshooting
+*****************
+
+* Menu:
+
+* Submitting a bugreport::
+* Generating backtrace::
+* Debug messages::
+
+First of all, check the logs (*note log::).  By default, Knot DNS logs
+all error messages to syslog. Enabling at least the `warning' message
+severity may help you identify some problems.
+
+
+File: knot.info,  Node: Submitting a bugreport,  Next: Generating backtrace,  Up: Troubleshooting
+
+6.1 Submitting a bugreport
+==========================
+
+If you are unable to solve the problem by yourselves, you can submit a
+bugreport to the Knot DNS team. For security issues (e.g. crash) do not
+use the public mailinglist. Instead, write to knot-dns@labs.nic.cz
+(mailto:knot-dns@labs.nic.cz). All other bugs and questions may be
+directed to the Knot DNS users mailinglist (knot-dns-users@lists.nic.cz
+(mailto:knot-dns-users@lists.nic.cz)).
+
+The bugreport should contain at least:
+   * Knot DNS version and type of installation (source, package, etc.),
+
+   * type and version of your operating system,
+
+   * basic hardware information,
+
+   * description of the bug,
+
+   * log output of all messages (category `any') with severity Info and
+     higher (severities `info, notice, warning, error', or `any' if
+     debug messages are not turned on (see below)),
+
+   * steps to reproduce the bug (if known),
+
+   * backtrace (if the bug caused a crash; see next section).
+
+If it is possible, the actual configuration file and/or zone file(s)
+will be very useful as well.
+
+
+File: knot.info,  Node: Generating backtrace,  Next: Debug messages,  Prev: Submitting a bugreport,  Up: Troubleshooting
+
+6.2 Generating backtrace
+========================
+
+There are several ways to achieve that, the most common way is to leave
+core dumps and then extract a backtrace from it.  This doesn't affect
+any server operation, you just need to make sure the OS is configured
+to generate them.
+
+     $ ulimit -c unlimited # enable unlimited core dump size
+     ...
+     $ gdb $(which knotd) core.<KNOT_PID>   # start gdb on a core dump
+     (gdb) thread apply all bt    # extract backtrace from all threads
+     (gdb) q
+
+If the error is repeatable, you can run the binary in a `gdb' debugger
+or attach the debugger to the running process. The backtrace from a
+running process is generally useful when debugging problems like stuck
+process and similar.
+     $ knotc -c knot.conf start
+     $ sudo gdb --pid <KNOT_PID>
+     (gdb) continue
+     ...
+     (gdb) thread apply all bt
+     (gdb) q
+
+
+File: knot.info,  Node: Debug messages,  Prev: Generating backtrace,  Up: Troubleshooting
+
+6.3 Debug messages
+==================
+
+* Menu:
+
+* Enabling debug messages in server::
+
+In some cases the aforementioned information may not be enough to find
+and fix the bug. In these cases it may be useful to turn on debug
+messages.
+
+Two steps are required in order to log debug messages. First you need to
+allow the debug messages in the server. Then the logging must be
+configured to log debug messages (*note log::). It is recommended to
+log these messages to a file. Firstly, the debug output may be rather
+large and secondly, it is easier to use the data for debugging.
+
+
+File: knot.info,  Node: Enabling debug messages in server,  Up: Debug messages
+
+6.3.1 Enabling debug messages in server
+---------------------------------------
+
+* Menu:
+
+* Debug messages Example::
+
+Allowing debug messages in the server is possible only when configuring
+the sources. Two `configure' options are required to do this:
+
+   * The `--enable-debug' option specifies the server modules for which
+     you want to enable debug messages. One or more of the following
+     modules may be listed, separated by commas:
+
+        * `server' - Messages related to networking, threads and
+          low-level       journal handling.
+
+        * `zones' - All operations with zones - loading, updating,
+          saving,       timers, high-level journal management.
+
+        * `xfr' - AXFR, IXFR and NOTIFY handling.
+
+        * `packet' - Packet parsing and response creation.
+
+        * `dname' - Parsing, comparing and other operations on domain
+          names.
+
+        * `rr' - Details of processed resource records.
+
+        * `ns' - Query processing, high-level handling of all requests
+              (transfers, NOTIFY, normal queries).
+
+        * `hash' - Details of hash table (the main data structure)
+          operation.
+
+        * `compiler' - Zone file compilation.
+
+   * The `--enable-debuglevel' option is used to specify the verbosity
+     of the debug output. Be careful with this, as the `details'
+     verbosity may produce really large logs (in order of GBs). There
+     are three levels of verbosity: `brief', `verbose' and `details'.
+
+
+
+File: knot.info,  Node: Debug messages Example,  Up: Enabling debug messages in server
+
+6.3.1.1 Example
+...............
+
+     $ ./configure --enable-debug=server,zones --enable-debuglevel=verbose
+
+
+File: knot.info,  Node: Statement Index,  Next: Knot DNS Configuration Reference,  Prev: Troubleshooting,  Up: Top
+
+Statement Index
+***************
+
+ [index ]
+* Menu:
+
+* address:                               address.               (line 6)
+* category:                              category.              (line 6)
+* disable-any:                           disable-any.           (line 6)
+* file:                                  file.                  (line 6)
+* group_id:                              group_id.              (line 6)
+* groups:                                groups.                (line 6)
+* groups_remote_id:                      groups_remote_id.      (line 6)
+* identity:                              identity.              (line 6)
+* include:                               include.               (line 6)
+* interface_id:                          interface_id.          (line 6)
+* interfaces:                            interfaces.            (line 6)
+* ixfr-from-differences:                 ixfr-from-differences. (line 6)
+* ixfr-fslimit:                          ixfr-fslimit.          (line 6)
+* key:                                   key.                   (line 6)
+* key_id:                                key_id.                (line 6)
+* keys:                                  keys.                  (line 6)
+* log:                                   log.                   (line 6)
+* log_file:                              log_file.              (line 6)
+* log_name:                              log_name.              (line 6)
+* max-conn-hs:                           max-conn-hs.           (line 6)
+* max-conn-idle:                         max-conn-idle.         (line 6)
+* max-conn-reply:                        max-conn-reply.        (line 6)
+* max-udp-payload:                       max-udp-payload.       (line 6)
+* notify-in:                             notify-in.             (line 6)
+* notify-out:                            notify-out.            (line 6)
+* notify-retries:                        notify-retries.        (line 6)
+* notify-timeout:                        notify-timeout.        (line 6)
+* nsid:                                  nsid.                  (line 6)
+* pidfile:                               pidfile.               (line 6)
+* port:                                  port.                  (line 6)
+* rate-limit:                            rate-limit.            (line 6)
+* rate-limit-size:                       rate-limit-size.       (line 6)
+* rate-limit-slip:                       rate-limit-slip.       (line 6)
+* remote_id:                             remote_id.             (line 6)
+* remotes:                               remotes.               (line 6)
+* rundir:                                rundir.                (line 6)
+* semantic-checks:                       semantic-checks.       (line 6)
+* severity:                              severity.              (line 6)
+* storage:                               storage.               (line 6)
+* system:                                system.                (line 6)
+* transfers:                             transfers.             (line 6)
+* update-in:                             update-in.             (line 6)
+* user:                                  user.                  (line 6)
+* version:                               version.               (line 6)
+* via:                                   via.                   (line 6)
+* workers:                               workers.               (line 6)
+* xfr-in:                                xfr-in.                (line 6)
+* xfr-out:                               xfr-out.               (line 6)
+* zone_id:                               zone_id.               (line 6)
+* zonefile-sync:                         zonefile-sync.         (line 6)
+
+
+File: knot.info,  Node: Knot DNS Configuration Reference,  Prev: Statement Index,  Up: Top
+
+Appendix A Knot DNS Configuration Reference
+*******************************************
+
+This reference describes every configuration option in Knot DNS server.
+
+* Menu:
+
+* system::
+* keys::
+* interfaces::
+* remotes::
+* groups::
+* control::
+* zones::
+* log::
+* include::
+
+
+File: knot.info,  Node: system,  Next: keys,  Up: Knot DNS Configuration Reference
+
+A.1 `system' Statement
+======================
+
+The `system' statement contains general options related to the
+operating system and other general options which do not fit anywhere
+else.
+
+* Menu:
+
+* system Syntax::
+* system Statement Definition and Usage::
+* system Example::
+
+
+File: knot.info,  Node: system Syntax,  Next: system Statement Definition and Usage,  Up: system
+
+A.1.1 `system' Syntax
+---------------------
+
+     `system' `{'
+       [ `identity' ( `on' | `"'string`"' )`;' ]
+       [ `version' ( `on' | `"'string`"' )`;' ]
+       [ `nsid' ( `on' | `"'string`"' | hex_string )`;' ]
+       [ `storage' `"'string`";' ]
+       [ `rundir' `"'string`";' ]
+       [ `pidfile' `"'string`";' ]
+       [ `workers' integer`;' ]
+       [ `user' string[`.'string]`;' ]
+       [ `max-conn-idle' ( integer | integer(`s' | `m' | `h' | `d')`;' ) ]
+       [ `max-conn-hs' ( integer | integer(`s' | `m' | `h' | `d')`;' ) ]
+       [ `max-conn-reply' ( integer | integer(`s' | `m' | `h' | `d')`;' ) ]
+       [ `transfers' integer`;' ]
+       [ `rate-limit' integer`;' ]
+       [ `rate-limit-size' integer`;' ]
+       [ `rate-limit-slip' integer`;' ]
+       [ `max-udp-payload' integer`;' ]
+     `}'
+
+
+File: knot.info,  Node: system Statement Definition and Usage,  Next: system Example,  Prev: system Syntax,  Up: system
+
+A.1.2 Statement Definition and Usage
+------------------------------------
+
+* Menu:
+
+* identity::
+* version::
+* nsid::
+* storage::
+* rundir::
+* pidfile::
+* workers::
+* user::
+* max-conn-idle::
+* max-conn-hs::
+* max-conn-reply::
+* transfers::
+* rate-limit::
+* rate-limit-size::
+* rate-limit-slip::
+* max-udp-payload::
+
+
+File: knot.info,  Node: identity,  Next: version,  Up: system Statement Definition and Usage
+
+A.1.2.1 identity
+................
+
+Identity of the server returned in a response for the query for TXT
+record `id.server.' or `hostname.bind.' in the CHAOS class (see RFC
+4892 (http://tools.ietf.org/html/rfc4892)).
+
+If not specified or empty, the server returns REFUSED status code.  If
+a boolean value of `on' is used, FQDN hostname is used as a default.
+
+     system {
+       identity "ns01.example.com";
+       identity on;
+     }
+
+
+File: knot.info,  Node: version,  Next: nsid,  Prev: identity,  Up: system Statement Definition and Usage
+
+A.1.2.2 version
+...............
+
+Version of the server software returned in a response for the query for
+TXT record `version.server.' or `version.bind.' in the CHAOS class (see
+RFC 4892 (http://tools.ietf.org/html/rfc4892)).
+
+Option allows a boolean value `on|off', if `on', automatic version
+string is set as a default. If not specified or empty, the server
+returns REFUSED status code.
+
+     system {
+       version "Knot DNS 1.3.0";
+       version on; # Reports current version
+     }
+
+
+File: knot.info,  Node: nsid,  Next: storage,  Prev: version,  Up: system Statement Definition and Usage
+
+A.1.2.3 nsid
+............
+
+DNS Name Server Identifier (see RFC 5001
+(http://tools.ietf.org/html/rfc5001)).
+
+Use a string format "text" or a hexstring (e.g. 0x01ab00) If a boolean
+value of `on' is used, FQDN hostname is used as a default.
+
+     system {
+       nsid 0x00cafe;
+       nsid "cafe";
+       nsid on;
+     }
+
+
+File: knot.info,  Node: storage,  Next: rundir,  Prev: nsid,  Up: system Statement Definition and Usage
+
+A.1.2.4 storage
+...............
+
+The working directory of Knot DNS, it is used to store zone files and
+journal files.  Default: `${localstatedir}/lib/knot', configured with
+`--with-storage=path'
+
+     system {
+       storage "/var/lib/knot";
+     }
+
+
+File: knot.info,  Node: rundir,  Next: pidfile,  Prev: storage,  Up: system Statement Definition and Usage
+
+A.1.2.5 rundir
+..............
+
+Path for storing run-time data, for example PID file and unix sockets.
+Default: `${localstatedir}/run/knot', configured with
+`--with-rundir=path'
+
+     system {
+       rundir "/var/run/knot";
+     }
+
+
+File: knot.info,  Node: pidfile,  Next: workers,  Prev: rundir,  Up: system Statement Definition and Usage
+
+A.1.2.6 pidfile
+...............
+
+Specifies a custom PID file location.
+
+Default value: `knot.pid' in `rundir' directory.
+
+     system {
+       pidfile "/var/run/knot/knot_dmz.pid";
+     }
+
+
+File: knot.info,  Node: workers,  Next: user,  Prev: pidfile,  Up: system Statement Definition and Usage
+
+A.1.2.7 workers
+...............
+
+Number of workers (threads) per server interface.  This option is used
+to force number of threads used per interface.
+
+Default value: unset (auto-estimates optimal value from the number of
+online CPUs)
+
+     system {
+       workers 16;
+     }
+
+
+File: knot.info,  Node: user,  Next: max-conn-idle,  Prev: workers,  Up: system Statement Definition and Usage
+
+A.1.2.8 user
+............
+
+System `user' or `user'.`group' under which the Knot DNS is run after
+starting and binding to interfaces.  Linux capabilities (*note Required
+libraries::) are employed if supported and this configuration option is
+set.
+
+Default value: `root.root'
+
+     system {
+       user knot.knot;
+     }
+
+
+File: knot.info,  Node: max-conn-idle,  Next: max-conn-hs,  Prev: user,  Up: system Statement Definition and Usage
+
+A.1.2.9 max-conn-idle
+.....................
+
+Maximum idle time between requests on a TCP connection.  This also
+limits receiving of a single query, each query must be received in this
+time limit.
+
+
+File: knot.info,  Node: max-conn-hs,  Next: max-conn-reply,  Prev: max-conn-idle,  Up: system Statement Definition and Usage
+
+A.1.2.10 max-conn-hs
+....................
+
+Maximum time between newly accepted TCP connection and first query.
+This is useful to disconnect inactive connections faster, than
+connection that already made at least 1 meaningful query.
+
+
+File: knot.info,  Node: max-conn-reply,  Next: transfers,  Prev: max-conn-hs,  Up: system Statement Definition and Usage
+
+A.1.2.11 max-conn-reply
+.......................
+
+Maximum time to wait for a reply to an issued SOA query.
+
+
+File: knot.info,  Node: transfers,  Next: rate-limit,  Prev: max-conn-reply,  Up: system Statement Definition and Usage
+
+A.1.2.12 transfers
+..................
+
+Maximum parallel transfers, including pending SOA queries.  Lowest
+possible number is the number of CPUs.  Default is 10.
+
+
+File: knot.info,  Node: rate-limit,  Next: rate-limit-size,  Prev: transfers,  Up: system Statement Definition and Usage
+
+A.1.2.13 rate-limit
+...................
+
+Rate limiting is based on a token bucket scheme, rate basically
+represents number of tokens available each second.  Each response is
+processed and classified (based on a several discriminators, f.e.
+source netblock, qtype, name, rcode, etc.).  Classified responses are
+then hashed and assigned to a bucket containing number of available
+tokens, timestamp and metadata.  When available tokens are exhausted,
+response is rejected or enters SLIP (server responds with a truncated
+response).  Number of available tokens is recalculated each second.
+
+Default value: `0 (disabled)'
+
+
+File: knot.info,  Node: rate-limit-size,  Next: rate-limit-slip,  Prev: rate-limit,  Up: system Statement Definition and Usage
+
+A.1.2.14 rate-limit-size
+........................
+
+Option controls the size of a hashtable of buckets. The larger the
+hashtable, the lesser probability of a hash collision, but at the
+expense of additional memory costs. Each bucket is estimated roughly to
+32B.  Size should be selected as a reasonably large prime due to the
+better hash function distribution properties.  Hash table is internally
+chained and works well up to a fill rate of 90%, general rule of thumb
+is to select a prime near `1.2 * maximum_qps'.
+
+Default value: `393241'
+
+
+File: knot.info,  Node: rate-limit-slip,  Next: max-udp-payload,  Prev: rate-limit-size,  Up: system Statement Definition and Usage
+
+A.1.2.15 rate-limit-slip
+........................
+
+As attacks using DNS/UDP are usually based on a forged source address,
+an attacker could deny services to the victim netblock if all responses
+would be completely blocked. The idea behind SLIP mechanism is to send
+each Nth response as truncated, thus allowing client to reconnect via
+TCP for at least some degree of service. It is worth noting, that some
+responses can't be truncated (f.e. SERVFAIL).
+
+Default value: `1'
+
+
+File: knot.info,  Node: max-udp-payload,  Prev: rate-limit-slip,  Up: system Statement Definition and Usage
+
+A.1.2.16 max-udp-payload
+........................
+
+Maximum EDNS0 UDP payload size.
+
+Default value: `4096'
+
+
+File: knot.info,  Node: system Example,  Prev: system Statement Definition and Usage,  Up: system
+
+A.1.3 system Example
+--------------------
+
+     system {
+       identity "Knot DNS 1.3.3";
+       version "1.3.3";
+       nsid    "amaterasu";
+       storage "/var/lib/knot";
+       rundir "/var/run/knot";
+       workers 16;
+       user knot.knot;
+     }
+
+
+File: knot.info,  Node: keys,  Next: interfaces,  Prev: system,  Up: Knot DNS Configuration Reference
+
+A.2 `keys' Statement
+====================
+
+The `keys' statement sets up the TSIG keys used to authenticate zone
+transfers.
+
+* Menu:
+
+* keys Syntax::
+* keys Statement Definition and Usage::
+* Example::
+
+
+File: knot.info,  Node: keys Syntax,  Next: keys Statement Definition and Usage,  Up: keys
+
+A.2.1 keys Syntax
+-----------------
+
+     keys {
+       key_id algorithm "string"; ]
+       [ key_id algorithm "string"; ... ]
+     }
+
+
+File: knot.info,  Node: keys Statement Definition and Usage,  Next: Example,  Prev: keys Syntax,  Up: keys
+
+A.2.2 Statement Definition and Usage
+------------------------------------
+
+* Menu:
+
+* key_id::
+
+
+File: knot.info,  Node: key_id,  Up: keys Statement Definition and Usage
+
+A.2.2.1 `key_id' Statement
+..........................
+
+The `key_id' statement defines a secret shared key for use with TSIG.
+It consists of its `name', `algorithm' and `key' contents.
+
+Supported algoritms:
+
+   * hmac-md5
+
+   * hmac-sha1
+
+   * hmac-sha224
+
+   * hmac-sha256
+
+   * hmac-sha384
+
+   * hmac-sha512
+
+You need to use bind or ldns utils to generate TSIG keys.
+Unfortunately, Knot DNS does not have any own generation utilities yet.
+
+
+     $ dnssec-keygen -a HMAC-SHA256 -b 256 -n HOST foobar.example.com
+     Kfoobar.example.com.+163+21239
+     $ cat Kfoobar.example.com.+163+21239.key
+     foobar.example.com. ( IN KEY 512 3 163
+                           rqv2WRyDgIUaHcJi03Zssor9jtG1kOpb3dPywxZfTeo= )
+
+Key generated in previous paragraph would be written as:
+
+
+     keys {
+       foobar.example.com. hmac-sha256
+       "rqv2WRyDgIUaHcJi03Zssor9jtG1kOpb3dPywxZfTeo=";
+     }
+
+
+File: knot.info,  Node: Example,  Prev: keys Statement Definition and Usage,  Up: keys
+
+A.2.3 keys Example
+------------------
+
+
+     keys {
+       key0.server0 hmac-md5 "Wg==";
+       foobar.example.com. hmac-sha256 "RQ==";
+     }
+
+
+File: knot.info,  Node: interfaces,  Next: remotes,  Prev: keys,  Up: Knot DNS Configuration Reference
+
+A.3 interfaces
+==============
+
+The `interfaces' statement contains IP interfaces where Knot DNS
+listens for incoming queries.
+
+* Menu:
+
+* interfaces Syntax::
+* interfaces Statement Definition and Usage::
+* interfaces Examples::
+
+
+File: knot.info,  Node: interfaces Syntax,  Next: interfaces Statement Definition and Usage,  Up: interfaces
+
+A.3.1 Syntax
+------------
+
+     `interfaces' `{'
+       interface_id
+         ( ip_address[@port_number] |
+           `{' `address' ip_address`;' [ `port' port_number`;' ] `}' )
+       [ interface_id ...`;' ...`;' ]
+     `}'
+
+
+File: knot.info,  Node: interfaces Statement Definition and Usage,  Next: interfaces Examples,  Prev: interfaces Syntax,  Up: interfaces
+
+A.3.2 Statement Definition and Usage
+------------------------------------
+
+* Menu:
+
+* interface_id::
+
+
+File: knot.info,  Node: interface_id,  Up: interfaces Statement Definition and Usage
+
+A.3.2.1 `interface_id'
+......................
+
+The `interface_id' is a textual identifier of an IP interface, which
+consists of an IP address and a port.
+
+The definition of an interface can be written in long or a short form
+and it always contains IP (IPv4 or IPv6) address.
+
+
+File: knot.info,  Node: interfaces Examples,  Prev: interfaces Statement Definition and Usage,  Up: interfaces
+
+A.3.3 interfaces Examples
+-------------------------
+
+Long form:
+
+
+     interfaces {
+       my_ip {
+         address 192.0.2.1;
+         port 53;
+       }
+     }
+
+Short form:
+
+
+     interfaces {
+       my_second_ip { address 198.51.100.1@53; }
+     }
+
+Short form without port (defaults to 53):
+
+
+     interfaces {
+       my_third_ip { address 203.0.113.1; }
+     }
+
+
+File: knot.info,  Node: remotes,  Next: groups,  Prev: interfaces,  Up: Knot DNS Configuration Reference
+
+A.4 `remotes' Statement
+=======================
+
+The `remotes' statement sets up all remote servers for zone transfers.
+Knot DNS does not distinguish between client or server in this section.
+Role of the server is determined at the time of its usage in the
+`zones' section.  One server may act as a client for one zone (e.g.
+downloading the updates) and as a master server for a different zone.
+
+* Menu:
+
+* remotes Syntax::
+* remotes Statement Definition and Grammar::
+* remotes Examples::
+
+
+File: knot.info,  Node: remotes Syntax,  Next: remotes Statement Definition and Grammar,  Up: remotes
+
+A.4.1 Syntax
+------------
+
+     `remotes' `{'
+       remote_id
+         ( ip_address[`@'port_number] |
+           `{'   `address' ip_address;
+              [ `port' port_number; ]
+              [ `key' key_id; ]
+              [ `via' [ interface_id | ip_address ]; ]
+           `}'
+         )
+       [ remote_id ...; ...; ]
+     `}'
+
+
+File: knot.info,  Node: remotes Statement Definition and Grammar,  Next: remotes Examples,  Prev: remotes Syntax,  Up: remotes
+
+A.4.2 Statement Definition and Grammar
+--------------------------------------
+
+* Menu:
+
+* remote_id::
+* address::
+* port::
+* key::
+* via::
+
+
+File: knot.info,  Node: remote_id,  Next: address,  Up: remotes Statement Definition and Grammar
+
+A.4.2.1 `remote_id'
+...................
+
+`remote_id' contains a symbolic name for a remote server.
+
+
+File: knot.info,  Node: address,  Next: port,  Prev: remote_id,  Up: remotes Statement Definition and Grammar
+
+A.4.2.2 address
+...............
+
+`address' sets an IPv4 or an IPv6 address for this particular `remote'.
+
+
+File: knot.info,  Node: port,  Next: key,  Prev: address,  Up: remotes Statement Definition and Grammar
+
+A.4.2.3 port
+............
+
+`port' section contains a port number for the current `remote'.  This
+section is optional with default port set to 53.
+
+
+File: knot.info,  Node: key,  Next: via,  Prev: port,  Up: remotes Statement Definition and Grammar
+
+A.4.2.4 key
+...........
+
+`key' section contains a key associated with this `remote'. This
+section is optional.
+
+
+File: knot.info,  Node: via,  Prev: key,  Up: remotes Statement Definition and Grammar
+
+A.4.2.5 via
+...........
+
+`via' section specifies which interface will be used to communicate
+with this `remote'. This section is optional.
+
+
+File: knot.info,  Node: remotes Examples,  Prev: remotes Statement Definition and Grammar,  Up: remotes
+
+A.4.3 remotes Examples
+----------------------
+
+
+     remotes {
+
+       # Format 1:
+       server0 {
+         address 127.0.0.1;
+         port 53531;
+         key key0.server0;
+         via ipv4;             # reference to 'remotes'
+         # via 82.35.64.59;    # direct IPv4
+         # via [::cafe];       # direct IPv6
+       }
+
+       # Format 2:
+       server1 {
+         address 127.0.0.1@53001;
+       }
+     }
+
+
+File: knot.info,  Node: groups,  Next: control,  Prev: remotes,  Up: Knot DNS Configuration Reference
+
+A.5 `groups' Statement
+======================
+
+The `groups' statement is used to create groups of remote machines
+defined in *note remotes:: statement. The group can substitute multiple
+machines specification anywhere in the configuration where the list of
+remotes is allowed to be used (namely `allow' in *note control::
+section and ACLs in *note zones:: section).
+
+The remotes definitions must exist prior to using them in group
+definitions.  One remote can be a member of multiple groups.
+
+* Menu:
+
+* groups Syntax::
+* groups Statement Definition and Grammar::
+* groups Examples::
+
+
+File: knot.info,  Node: groups Syntax,  Next: groups Statement Definition and Grammar,  Up: groups
+
+A.5.1 Syntax
+------------
+
+     `groups' `{'
+       group_id `{' remote_id [ `,' ... ] `}'
+       [ ... ]
+     `}'
+
+
+File: knot.info,  Node: groups Statement Definition and Grammar,  Next: groups Examples,  Prev: groups Syntax,  Up: groups
+
+A.5.2 Statement Definition and Grammar
+--------------------------------------
+
+* Menu:
+
+* group_id::
+* remote_id:groups_remote_id.
+
+
+File: knot.info,  Node: group_id,  Next: groups_remote_id,  Up: groups Statement Definition and Grammar
+
+A.5.2.1 `group_id'
+..................
+
+`group_id' contains a symbolic name for a group of remotes.
+
+
+File: knot.info,  Node: groups_remote_id,  Prev: group_id,  Up: groups Statement Definition and Grammar
+
+A.5.2.2 `remote_id'
+...................
+
+`remote_id' contains a symbolic name for a remote server as specified in
+*note remotes:: section.
+
+
+File: knot.info,  Node: groups Examples,  Prev: groups Statement Definition and Grammar,  Up: groups
+
+A.5.3 Examples
+--------------
+
+     remotes {
+       ctl {
+         # ...
+       }
+       alice {
+         # ...
+       }
+       bob {
+         # ...
+       }
+     }
+
+     groups {
+       admins { alice, bob }
+     }
+
+     # example usage:
+     control {
+       # ...
+       allow ctl, admins;
+     }
+
+
+File: knot.info,  Node: control,  Next: zones,  Prev: groups,  Up: Knot DNS Configuration Reference
+
+A.6 `control' Statement
+=======================
+
+The `control' statement specifies on which interface to listen for
+remote control commands.  Caution: The control protocol is not
+encrypted, and susceptible to replay attack in a short timeframe until
+message digest expires, for that reason, it is recommended to use
+default UNIX sockets.
+
+* Menu:
+
+* control Syntax::
+* control Statement Definition and Grammar::
+* control Examples::
+
+
+File: knot.info,  Node: control Syntax,  Next: control Statement Definition and Grammar,  Up: control
+
+A.6.1 Syntax
+------------
+
+     `control' `{'
+       [ listen-on `{'
+         ( `address' ip_address[@port_number] |
+           `{' `address' ip_address`;' [ `port' port_number`;' ] `}' )
+       `}' ]
+       [ `allow' remote_id [, remote_id, ... ]`;' ]
+     `}'
+
+
+File: knot.info,  Node: control Statement Definition and Grammar,  Next: control Examples,  Prev: control Syntax,  Up: control
+
+A.6.2 Statement Definition and Grammar
+--------------------------------------
+
+Control interface `listen-on' either defines a UNIX socket or an
+IPv4/IPv6 `interface' definition as in *note interfaces::.  Default
+port for IPv4/v6 control interface is `5533', however UNIX socket is
+preferred.  UNIX socket address is relative to `rundir' if not
+specified as an absolute path. Without any configuration, the socket
+will be created in `rundir/knot.sock'.
+
+
+File: knot.info,  Node: control Examples,  Prev: control Statement Definition and Grammar,  Up: control
+
+A.6.3 Examples
+--------------
+
+UNIX socket example:
+     control {
+             listen-on "/var/run/knot/knot.sock";
+     }
+
+IPv4 socket example:
+     keys {
+             knotc-key hmac-md5 "Wg==";
+     }
+     remotes {
+             ctl { address 127.0.0.1; key knotc-key; }
+     }
+     control {
+             listen-on { address 127.0.0.1; }
+             allow ctl;
+     }
+
+
+File: knot.info,  Node: zones,  Next: log,  Prev: control,  Up: Knot DNS Configuration Reference
+
+A.7 `zones' Statement
+=====================
+
+The `zones' statement contains definition of zones served by Knot DNS.
+
+* Menu:
+
+* zones Syntax::
+* zones Statement Definition and Grammar::
+* zones Example::
+* zones List of zone semantic checks::
+
+
+File: knot.info,  Node: zones Syntax,  Next: zones Statement Definition and Grammar,  Up: zones
+
+A.7.1 Syntax
+------------
+
+     `zones' `{'
+       [ zone_options ]
+       zone_id `{'
+         `file' `"'string`";'
+         [ `xfr-in' remote_id [, remote_id, ... ]`;' ]
+         [ `xfr-out' remote_id [, remote_id, ... ]`;' ]
+         [ `notify-in' remote_id [, remote_id, ... ]`;' ]
+         [ `notify-out' remote_id [, remote_id, ... ]`;' ]
+         [ `update-in' remote_id [, remote_id, ... ]`;' ]
+         [ zone_options ]
+       `}'
+     `}'
+
+     zone_options :=
+       [ `semantic-checks' boolean`;' ]
+       [ `ixfr-from-differences' boolean`;' ]
+       [ `disable-any' boolean`;' ]
+       [ `notify-timeout' integer`;' ]
+       [ `notify-retries' integer`;' ]
+       [ `zonefile-sync' ( integer | integer(`s' | `m' | `h' | `d')`;' ) ]
+       [ `ixfr-fslimit' ( integer | integer(`k' | `M' | `G') )`;' ]
+       [ `ixfr-from-differences' boolean`;' ]
+
+
+File: knot.info,  Node: zones Statement Definition and Grammar,  Next: zones Example,  Prev: zones Syntax,  Up: zones
+
+A.7.2 Statement Definition and Grammar
+--------------------------------------
+
+* Menu:
+
+* zone_id::
+* file::
+* xfr-in::
+* xfr-out::
+* notify-in::
+* notify-out::
+* update-in::
+* semantic-checks::
+* ixfr-from-differences::
+* disable-any::
+* notify-timeout::
+* notify-retries::
+* zonefile-sync::
+* ixfr-fslimit::
+
+
+File: knot.info,  Node: zone_id,  Next: file,  Up: zones Statement Definition and Grammar
+
+A.7.2.1 `zone_id'
+.................
+
+`zone_id' is a zone origin, and as such is a domain name that may or
+may not end with a ".".  If no $ORIGIN directive is found inside actual
+zone file, this domain name will be used in place of "@".  SOA record
+in the zone must have this name as its owner.
+
+
+File: knot.info,  Node: file,  Next: xfr-in,  Prev: zone_id,  Up: zones Statement Definition and Grammar
+
+A.7.2.2 file
+............
+
+The `file' statement defines a path to the zone file.  You can either
+use an absolute path or a relative path.  In that case, the zone file
+path will be relative to the `storage' directory (*note storage::).
+
+
+File: knot.info,  Node: xfr-in,  Next: xfr-out,  Prev: file,  Up: zones Statement Definition and Grammar
+
+A.7.2.3 xfr-in
+..............
+
+In `xfr-in' statement user specifies which remotes will be permitted to
+perform a zone transfer to update the zone.  Remotes are defined in
+`remotes' section of configuration file (*note remotes::).
+
+
+File: knot.info,  Node: xfr-out,  Next: notify-in,  Prev: xfr-in,  Up: zones Statement Definition and Grammar
+
+A.7.2.4 xfr-out
+...............
+
+In `xfr-out' statement user specifies which remotes will be permitted
+to obtain zone's contents via zone transfer.  Remotes are defined in
+`remotes' section of configuration file (*note remotes::).
+
+
+File: knot.info,  Node: notify-in,  Next: notify-out,  Prev: xfr-out,  Up: zones Statement Definition and Grammar
+
+A.7.2.5 notify-in
+.................
+
+`notify-in' defines which remotes will be permitted to send NOTIFY for
+this particular zone.
+
+
+File: knot.info,  Node: notify-out,  Next: update-in,  Prev: notify-in,  Up: zones Statement Definition and Grammar
+
+A.7.2.6 notify-out
+..................
+
+`notify-out' defines to which remotes will your server send NOTIFYs
+about this particular zone.
+
+
+File: knot.info,  Node: update-in,  Next: semantic-checks,  Prev: notify-out,  Up: zones Statement Definition and Grammar
+
+A.7.2.7 update-in
+.................
+
+In `update-in' statement user specifies which remotes will be permitted
+to perform a DNS UPDATE.  Remotes are defined in `remotes' section of
+configuration file (*note remotes::).
+
+
+File: knot.info,  Node: semantic-checks,  Next: ixfr-from-differences,  Prev: update-in,  Up: zones Statement Definition and Grammar
+
+A.7.2.8 semantic-checks
+.......................
+
+`semantic-checks' statement turns on optional semantic checks for this
+particular zone.  See *note zones List of zone semantic checks:: for
+more information.
+
+Possible values are `on' and `off'.  Most checks are disabled by
+default.
+
+
+File: knot.info,  Node: ixfr-from-differences,  Next: disable-any,  Prev: semantic-checks,  Up: zones Statement Definition and Grammar
+
+A.7.2.9 ixfr-from-differences
+.............................
+
+EXPERIMENTAL: option `ixfr-from-differences' is only relevant if you
+are running Knot DNS as a master for this zone.  By turning the feature
+on you tell Knot to create differences from changes you made to a zone
+file upon server reload.  See *note Controlling running daemon:: for
+more information.
+
+Possible values are `on' and `off'. Disabled by default.
+
+
+File: knot.info,  Node: disable-any,  Next: notify-timeout,  Prev: ixfr-from-differences,  Up: zones Statement Definition and Grammar
+
+A.7.2.10 disable-any
+....................
+
+If you enable `disable-any', all authoritative ANY queries sent over
+UDP will be answered with an empty response and with the TC bit set.
+Use to minimize the risk of DNS replay attack. Disabled by default.
+
+
+File: knot.info,  Node: notify-timeout,  Next: notify-retries,  Prev: disable-any,  Up: zones Statement Definition and Grammar
+
+A.7.2.11 notify-timeout
+.......................
+
+`notify-timeout' in seconds specifies how long will server wait for
+NOTIFY response. Possible values are 1 to INT_MAX.  By default, this
+value is set to 60 seconds.
+
+
+File: knot.info,  Node: notify-retries,  Next: zonefile-sync,  Prev: notify-timeout,  Up: zones Statement Definition and Grammar
+
+A.7.2.12 notify-retries
+.......................
+
+`notify-retries' tells the server how many times it can retry to send a
+NOTIFY. Possible values are 1 to INT_MAX and default value is 5.
+
+
+File: knot.info,  Node: zonefile-sync,  Next: ixfr-fslimit,  Prev: notify-retries,  Up: zones Statement Definition and Grammar
+
+A.7.2.13 zonefile-sync
+......................
+
+`zonefile-sync' is only relevant in a slave server scenario and only
+after receiving IXFR. It is a time in seconds after which current zone
+in memory will be synced to its file on a disk (as set in *note
+file::). Knot DNS will serve the latest zone even after restart, but
+zone file on a disk will only be synced after `zonefile-sync' time has
+expired. Possible values are 1 to INT_MAX, optionally suffixed by unit
+size (s/m/h/d) - _1s_ is one second, _1m_ one minute, _1h_ one hour and
+_1d_ one day with default value set to _1h_.
+
+
+File: knot.info,  Node: ixfr-fslimit,  Prev: zonefile-sync,  Up: zones Statement Definition and Grammar
+
+A.7.2.14 ixfr-fslimit
+.....................
+
+`ixfr-fslimit' sets a maximum file size for zone's journal in bytes.
+Possible values are 1 to INT_MAX, with optional suffixes k, m and G.
+I.e. _1k_, _1m_ and _1G_ with default value not being set, meaning that
+journal file can grow without limitations.
+
+
+File: knot.info,  Node: zones Example,  Next: zones List of zone semantic checks,  Prev: zones Statement Definition and Grammar,  Up: zones
+
+A.7.3 zones Example
+-------------------
+
+     zones {
+
+       # Shared options for all listed zones
+       ixfr-from-differences off;
+       semantic-checks off;
+       disable-any off;
+       notify-timeout 60;
+       notify-retries 5;
+       zonefile-sync 1h;
+       ixfr-fslimit 1G;
+       example.com {
+         file "samples/example.com.zone";
+         ixfr-from-differences off; #experimental
+         disable-any off;
+         semantic-checks on;
+         notify-timeout 60;
+         notify-retries 5;
+         zonefile-sync 1h;
+         xfr-in server0;
+         xfr-out server0, server1;
+         notify-in server0;
+         notify-out server0, server1;
+       }
+     }
+
+
+File: knot.info,  Node: zones List of zone semantic checks,  Prev: zones Example,  Up: zones
+
+A.7.4 List of zone semantic checks
+----------------------------------
+
+The `semantic-checks' statement turns on extra zone file semantic
+checks. Several checks are enabled by default and cannot be turned off.
+If an error is found using these mandatory checks, the zone file will
+not be loaded. Upon loading a zone file, occurred errors and counts of
+their occurrence will be logged to _stderr_.  These checks are the
+following:
+
+     - An extra record together with CNAME record (except for RRSIG and DS)
+     - CNAME link chain length greater than 10 (including infinite cycles)
+     - DNAME and CNAME records under the same owner (RFC 2672)
+     - CNAME and DNAME wildcards pointing to themselves
+     - SOA record missing in the zone (RFC 1034)
+     - DNAME records having records under it (DNAME children) (RFC 2672)
+
+Following checks have to be turned on using `semantic-checks' and a
+zone containing following errors will be loaded even upon discovering
+an error:
+
+     - Missing NS record at the zone apex
+     - Missing glue A or AAAA records
+     - Broken or non-cyclic NSEC(3) chain
+     - Wrong NSEC(3) type bitmap
+     - Multiple NSEC records at the same node
+     - Missing NSEC records at authoritative nodes
+     - Extra record types under same name as NSEC3 record
+     (this is RFC-valid, but Knot will not serve such a zone correctly)
+     - NSEC3-unsecured delegation that is not part of Opt-out span
+     - Wrong original TTL value in NSEC3 records
+     - Wrong RDATA TTL value in RRSIG record
+     - Signer name in RRSIG RR not the same as in DNSKEY
+     - Signed RRSIG
+     - Not all RRs in node are signed
+     - Wrong key flags or wrong key in RRSIG record (not the same as ZSK)
+
+
+File: knot.info,  Node: log,  Next: include,  Prev: zones,  Up: Knot DNS Configuration Reference
+
+A.8 `log' Statement
+===================
+
+* Menu:
+
+* log Syntax::
+* log Statement Definition and Grammar::
+* log Example::
+
+
+File: knot.info,  Node: log Syntax,  Next: log Statement Definition and Grammar,  Up: log
+
+A.8.1 Syntax
+------------
+
+     `log' `{'
+       [ log_name `{'
+         [ category severity [, severity ... ]`;' ]
+       `}' ]
+       [ `log_file' filename {
+         [ category severity [, severity ... ]`;' ]
+       } ]
+     `}'
+
+
+File: knot.info,  Node: log Statement Definition and Grammar,  Next: log Example,  Prev: log Syntax,  Up: log
+
+A.8.2 Statement Definition and Grammar
+--------------------------------------
+
+* Menu:
+
+* log_name::
+* category::
+* severity::
+* log_file::
+
+The `log' statement configures logging output of Knot DNS.  You can
+configure Knot DNS to log into file or system log. There are several
+logging categories to choose from. Each log message has its severity
+and user can configure severities for each log destination.
+
+In case of missing log section, severities from `warning' and more
+serious will be logged to both `stderr' and `syslog'. The `info' and
+`notice' severities will be logged to the `stdout'.
+
+
+File: knot.info,  Node: log_name,  Next: category,  Up: log Statement Definition and Grammar
+
+A.8.2.1 `log_name'
+..................
+
+`log_name' should be replaced with one of 3 symbolic log names :
+   * _stdout_ - logging to standard output
+
+   * _stderr_ - logging to standard error output
+
+   * _syslog_ - logging to syslog
+
+
+File: knot.info,  Node: category,  Next: severity,  Prev: log_name,  Up: log Statement Definition and Grammar
+
+A.8.2.2 `category'
+..................
+
+Knot DNS allows user to choose from these logging categories:
+
+   * _server_ - Messages related to general operation of the server.
+
+   * _zone_ - Messages related to zones, zone parsing and loading.
+
+   * _answering_ - Messages regarding query processing and response
+     creation.
+
+   * _any_ - All categories.
+
+
+File: knot.info,  Node: severity,  Next: log_file,  Prev: category,  Up: log Statement Definition and Grammar
+
+A.8.2.3 `severity'
+..................
+
+Knot DNS has the following logging severities:
+   * _debug_ - Debug messages, must be turned on at compile time (*note
+     Enabling debug messages in server::).
+
+   * _info_ - Informational message.
+
+   * _notice_ - Server notices and hints.
+
+   * _warning_ - Warnings that might require user action.
+
+   * _error_ - Recoverable error. Action should be taken.
+
+   * _all_ - All severities.
+
+More severities may be listed for each category, but all severities
+have to be listed explicitly, i.e. using _warning_ severity does not
+mean that _error_ severity messages will be logged as well.
+
+
+File: knot.info,  Node: log_file,  Prev: severity,  Up: log Statement Definition and Grammar
+
+A.8.2.4 `log_file'
+..................
+
+`log_file' is either absolute or relative path to file user wants to
+log to.  See following example for clarification.
+
+
+File: knot.info,  Node: log Example,  Prev: log Statement Definition and Grammar,  Up: log
+
+A.8.3 log Example
+-----------------
+
+
+     log {
+
+       syslog {
+         any error;
+         zone warning, notice;
+         server info;
+       }
+
+       stderr {
+         any error, warning;
+       }
+
+       file "/tmp/knot-sample/knotd.debug" {
+         server debug;
+       }
+     }
+
+
+File: knot.info,  Node: include,  Prev: log,  Up: Knot DNS Configuration Reference
+
+A.9 `include' Statement
+=======================
+
+The `include' statement is a special statement which can be used almost
+anywhere on any level in the configuration file. It makes inclusion of
+another file possible.
+
+The path of the included file can be either absolute or relative to a
+configuration file currently being processed.
+
+* Menu:
+
+* include Syntax::
+* include Examples::
+
+
+File: knot.info,  Node: include Syntax,  Next: include Examples,  Up: include
+
+A.9.1 Syntax
+------------
+
+     `include' "filename"`;'
+
+
+File: knot.info,  Node: include Examples,  Prev: include Syntax,  Up: include
+
+A.9.2 Examples
+--------------
+
+     include "keys.conf";
+
+     remotes {
+       ctl {
+         address 127.0.0.1;
+         key knotc-key;
+       }
+       include "remotes.conf";
+     }
+
+
+
+Tag Table:
+Node: Top1039
+Node: Introduction4047
+Node: What is Knot DNS4345
+Node: Knot DNS features4863
+Node: Scope of this document5884
+Node: Knot DNS Resource Requirements6146
+Node: Hardware requirements6444
+Node: CPU requirements7084
+Node: Memory requirements7469
+Node: Supported operating system8185
+Node: Knot DNS Installation8653
+Node: Required build environment8960
+Node: Required libraries9584
+Node: Userspace RCU10389
+Node: Installation from the sources11341
+Node: Configuring and generating Makefiles11926
+Node: Compilation13584
+Node: Installation14160
+Node: Installation from packages14667
+Node: Installing Knot DNS packages on Debian15191
+Node: Installing Knot DNS packages on Ubuntu16169
+Node: Adding official PPA repository for Knot DNS17083
+Node: Installing Knot DNS packages on Fedora17711
+Node: Installing Knot DNS from ports on FreeBSD19110
+Node: Knot DNS Configuration19457
+Node: Minimal configuration20028
+Node: Slave configuration22041
+Node: Master configuration24037
+Node: Configuring multiple interfaces25083
+Node: Using DNS UPDATE25568
+Node: Remote control interface27135
+Node: Enabling zone semantic checks28227
+Node: Creating IXFR differences from zone file changes28694
+Node: Using Response Rate Limiting29267
+Node: Running Knot DNS30698
+Node: Running a slave server34316
+Node: Running a master server35612
+Node: Controlling running daemon36593
+Node: Troubleshooting37764
+Node: Submitting a bugreport38172
+Node: Generating backtrace39342
+Node: Debug messages40344
+Node: Enabling debug messages in server41014
+Node: Debug messages Example42574
+Node: Statement Index42773
+Node: Knot DNS Configuration Reference46596
+Node: system46962
+Node: system Syntax47323
+Node: system Statement Definition and Usage48239
+Node: identity48679
+Node: version49210
+Node: nsid49808
+Node: storage50235
+Node: rundir50592
+Node: pidfile50933
+Node: workers51232
+Node: user51617
+Node: max-conn-idle52051
+Node: max-conn-hs52366
+Node: max-conn-reply52727
+Node: transfers52958
+Node: rate-limit53243
+Node: rate-limit-size53985
+Node: rate-limit-slip54656
+Node: max-udp-payload55264
+Node: system Example55482
+Node: keys55839
+Node: keys Syntax56146
+Node: keys Statement Definition and Usage56375
+Node: key_id56581
+Node: Example57543
+Node: interfaces57777
+Node: interfaces Syntax58112
+Node: interfaces Statement Definition and Usage58450
+Node: interface_id58692
+Node: interfaces Examples59056
+Node: remotes59535
+Node: remotes Syntax60134
+Node: remotes Statement Definition and Grammar60573
+Node: remote_id60843
+Node: address61043
+Node: port61262
+Node: key61516
+Node: via61731
+Node: remotes Examples61961
+Node: groups62487
+Node: groups Syntax63177
+Node: groups Statement Definition and Grammar63395
+Node: group_id63653
+Node: groups_remote_id63860
+Node: groups Examples64107
+Node: control64513
+Node: control Syntax65050
+Node: control Statement Definition and Grammar65418
+Node: control Examples66001
+Node: zones66483
+Node: zones Syntax66827
+Node: zones Statement Definition and Grammar67787
+Node: zone_id68219
+Node: file68607
+Node: xfr-in68951
+Node: xfr-out69290
+Node: notify-in69635
+Node: notify-out69883
+Node: update-in70138
+Node: semantic-checks70481
+Node: ixfr-from-differences70900
+Node: disable-any71457
+Node: notify-timeout71844
+Node: notify-retries72189
+Node: zonefile-sync72508
+Node: ixfr-fslimit73218
+Node: zones Example73624
+Node: zones List of zone semantic checks74446
+Node: log76246
+Node: log Syntax76469
+Node: log Statement Definition and Grammar76795
+Node: log_name77505
+Node: category77834
+Node: severity78301
+Node: log_file79043
+Node: log Example79298
+Node: include79681
+Node: include Syntax80150
+Node: include Examples80288
+
+End Tag Table
+
+
+Local Variables:
+coding: utf-8
+End:

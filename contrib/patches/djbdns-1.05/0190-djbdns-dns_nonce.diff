@@ -1,0 +1,59 @@
+diff -Nur djbdns-1.05/dns_nonce.c djbdns-1.05.new/dns_nonce.c
+--- djbdns-1.05/dns_nonce.c	2013-05-30 17:44:56.142588128 +0200
++++ djbdns-1.05.new/dns_nonce.c	2013-06-05 12:08:57.224216257 +0200
+@@ -12,11 +12,12 @@
+ #include "uint32.h"
+ #include "uint64.h"
+ #include "byte.h"
++#include "randombytes.h"
+ #include "dns.h"
+ 
+ static unsigned char noncekey[16];
+ static uint64 noncecounter = 0;
+-static char noncemask[4] = {0, 0, 0, 0};
++static char noncemask[4] = {0xff, 0xff, 0xff, 0xff};
+ static char noncedata[4] = {0, 0, 0, 0};
+ 
+ void dns_nonce_init(const char *ns, const unsigned char *nk) {
+@@ -27,24 +28,25 @@
+     gettimeofday(&t,(struct timezone *) 0);
+     noncecounter = t.tv_sec * 1000000000ULL + t.tv_usec * 1000ULL;
+ 
+-    if (ns) {
+-        i = 0;
+-        while(i < 32) {
+-            if (!ns[i]) break;
+-            if (ns[i] != '0' && ns[i] != '1') break;
+-
+-            noncemask[i/8] = noncemask[i/8] * 2;
+-            noncedata[i/8] = noncedata[i/8] * 2 +  ns[i] - '0';
+-            ++i;
+-        }
+-        while(i < 32) {
+-            noncemask[i/8] = noncemask[i/8] * 2 + 1;
+-            noncedata[i/8] = noncedata[i/8] * 2;
+-            ++i;
+-        }
++    if (!ns) ns = "";
++
++    i = 0;
++    while(i < 32) {
++        if (!ns[i]) break;
++        if (ns[i] != '0' && ns[i] != '1') break;
++
++        noncemask[i/8] = noncemask[i/8] * 2;
++        noncedata[i/8] = noncedata[i/8] * 2 +  ns[i] - '0';
++        ++i;
++    }
++    while(i < 32) {
++        noncemask[i/8] = noncemask[i/8] * 2 + 1;
++        noncedata[i/8] = noncedata[i/8] * 2;
++        ++i;
+     }
+ 
+-    byte_copy(noncekey, sizeof noncekey, nk);
++    if (nk) byte_copy(noncekey, sizeof noncekey, nk);
++    else randombytes(noncekey, sizeof noncekey);
+ 
+     return;
+ }

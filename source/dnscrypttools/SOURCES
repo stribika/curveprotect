@@ -1,0 +1,9 @@
+dnscrypt
+providerparse
+printpacket
+printrecord
+dnscryptmakekeys
+dnscryptmakecert
+dnscryptqr
+dnscryptgetcert
+dnscryptserver

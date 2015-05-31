@@ -1,0 +1,4 @@
+dnscrypt.o
+providerparse.o
+printpacket.o
+printrecord.o

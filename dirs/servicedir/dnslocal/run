@@ -1,0 +1,6 @@
+#!/bin/sh
+PATH="_CURVEPROTECT_/bin:$PATH"
+export PATH
+
+exec 2>&1
+exec extremeenvuidgid envdir _CURVEPROTECT_/etc/dnslocal/env softlimit -d10000000 tinydns

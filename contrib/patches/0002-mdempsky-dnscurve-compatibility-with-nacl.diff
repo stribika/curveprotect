@@ -1,0 +1,411 @@
+diff -Nur mdempsky-dnscurve1/slownacl/curve25519.py mdempsky-dnscurve2/slownacl/curve25519.py
+--- mdempsky-dnscurve1/slownacl/curve25519.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/curve25519.py	2011-10-19 09:39:26.750798521 +0200
+@@ -1,4 +1,4 @@
+-__all__ = ['smult_curve25519_base', 'smult_curve25519']
++__all__ = ['crypto_scalarmult_curve25519_base', 'crypto_scalarmult_curve25519']
+ 
+ P = 2 ** 255 - 19
+ A = 486662
+@@ -52,11 +52,11 @@
+   n |= 64 << 8 * 31
+   return n
+ 
+-def smult_curve25519(n, p):
++def crypto_scalarmult_curve25519(n, p):
+   n = clamp(unpack(n))
+   p = unpack(p)
+   return pack(curve25519(n, p))
+ 
+-def smult_curve25519_base(n):
++def crypto_scalarmult_curve25519_base(n):
+   n = clamp(unpack(n))
+   return pack(curve25519(n, 9))
+diff -Nur mdempsky-dnscurve1/slownacl/__init__.py mdempsky-dnscurve2/slownacl/__init__.py
+--- mdempsky-dnscurve1/slownacl/__init__.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/__init__.py	2011-10-19 09:48:29.214871943 +0200
+@@ -1,8 +1,8 @@
+-from util import xor, randombytes
+-from verify import verify16, verify32
+-from salsa20 import core_hsalsa20, stream_salsa20, stream_salsa20_xor, stream_xsalsa20, stream_xsalsa20_xor
+-from poly1305 import onetimeauth_poly1305, onetimeauth_poly1305_verify
+-from sha512 import hash_sha512, auth_hmacsha512, auth_hmacsha512_verify
+-from curve25519 import smult_curve25519, smult_curve25519_base
+-from salsa20hmacsha512 import secretbox_salsa20hmacsha512, secretbox_salsa20hmacsha512_open, box_curve25519salsa20hmacsha512_keypair, box_curve25519salsa20hmacsha512, box_curve25519salsa20hmacsha512_open, box_curve25519salsa20hmacsha512_beforenm, box_curve25519salsa20hmacsha512_afternm, box_curve25519salsa20hmacsha512_open_afternm
+-from xsalsa20poly1305 import secretbox_xsalsa20poly1305, secretbox_xsalsa20poly1305_open, box_curve25519xsalsa20poly1305_keypair, box_curve25519xsalsa20poly1305, box_curve25519xsalsa20poly1305_open, box_curve25519xsalsa20poly1305_beforenm, box_curve25519xsalsa20poly1305_afternm, box_curve25519xsalsa20poly1305_open_afternm
++from util import xor, _randombytes
++from verify import crypto_verify16, crypto_verify32
++from salsa20 import crypto_core_hsalsa20, crypto_stream_salsa20, crypto_stream_salsa20_xor, crypto_stream_xsalsa20, crypto_stream_xsalsa20_xor
++from poly1305 import crypto_onetimeauth_poly1305, crypto_onetimeauth_poly1305_verify
++from sha512 import crypto_hash_sha512, crypto_auth_hmacsha512, crypto_auth_hmacsha512_verify
++from curve25519 import crypto_scalarmult_curve25519, crypto_scalarmult_curve25519_base
++from salsa20hmacsha512 import crypto_secretbox_salsa20hmacsha512, crypto_secretbox_salsa20hmacsha512_open, crypto_box_curve25519salsa20hmacsha512_keypair, crypto_box_curve25519salsa20hmacsha512, crypto_box_curve25519salsa20hmacsha512_open, crypto_box_curve25519salsa20hmacsha512_beforenm, crypto_box_curve25519salsa20hmacsha512_afternm, crypto_box_curve25519salsa20hmacsha512_open_afternm
++from xsalsa20poly1305 import crypto_secretbox_xsalsa20poly1305, crypto_secretbox_xsalsa20poly1305_open, crypto_box_curve25519xsalsa20poly1305_keypair, crypto_box_curve25519xsalsa20poly1305, crypto_box_curve25519xsalsa20poly1305_open, crypto_box_curve25519xsalsa20poly1305_beforenm, crypto_box_curve25519xsalsa20poly1305_afternm, crypto_box_curve25519xsalsa20poly1305_open_afternm
+diff -Nur mdempsky-dnscurve1/slownacl/poly1305.py mdempsky-dnscurve2/slownacl/poly1305.py
+--- mdempsky-dnscurve1/slownacl/poly1305.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/poly1305.py	2011-10-19 09:39:38.594627912 +0200
+@@ -1,6 +1,6 @@
+-from verify import verify16
++from verify import crypto_verify16
+ 
+-__all__ = ['onetimeauth_poly1305', 'onetimeauth_poly1305_verify']
++__all__ = ['crypto_onetimeauth_poly1305', 'crypto_onetimeauth_poly1305_verify']
+ 
+ P = 2 ** 130 - 5
+ 
+@@ -13,7 +13,7 @@
+ def pack(n):
+   return ''.join([chr(n >> 8 * i & 255) for i in range(16)])
+ 
+-def onetimeauth_poly1305(m, k):
++def crypto_onetimeauth_poly1305(m, k):
+   if len(k) != 32: raise ValueError('Invalid Poly1305 key')
+   r = unpack(k[:16]) & 0x0ffffffc0ffffffc0ffffffc0fffffff
+ 
+@@ -25,5 +25,5 @@
+ 
+   return pack(h)
+ 
+-def onetimeauth_poly1305_verify(a, m, k):
+-  return verify16(a, onetimeauth_poly1305(m, k))
++def crypto_onetimeauth_poly1305_verify(a, m, k):
++  return crypto_verify16(a, crypto_onetimeauth_poly1305(m, k))
+diff -Nur mdempsky-dnscurve1/slownacl/salsa20hmacsha512.py mdempsky-dnscurve2/slownacl/salsa20hmacsha512.py
+--- mdempsky-dnscurve1/slownacl/salsa20hmacsha512.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/salsa20hmacsha512.py	2011-10-19 09:46:35.066620086 +0200
+@@ -1,43 +1,43 @@
+-from util import xor, randombytes
+-from salsa20 import stream_salsa20
+-from sha512 import hash_sha512, auth_hmacsha512, auth_hmacsha512_verify
+-from curve25519 import smult_curve25519, smult_curve25519_base
++from util import xor, _randombytes
++from salsa20 import crypto_stream_salsa20
++from sha512 import crypto_hash_sha512, crypto_auth_hmacsha512, crypto_auth_hmacsha512_verify
++from curve25519 import crypto_scalarmult_curve25519, crypto_scalarmult_curve25519_base
+ 
+-__all__ = ['secretbox_salsa20hmacsha512', 'secretbox_salsa20hmacsha512_open', 'box_curve25519salsa20hmacsha512_keypair', 'box_curve25519salsa20hmacsha512', 'box_curve25519salsa20hmacsha512_open', 'box_curve25519salsa20hmacsha512_beforenm', 'box_curve25519salsa20hmacsha512_afternm', 'box_curve25519salsa20hmacsha512_open_afternm']
++__all__ = ['crypto_secretbox_salsa20hmacsha512', 'crypto_secretbox_salsa20hmacsha512_open', 'crypto_box_curve25519salsa20hmacsha512_keypair', 'crypto_box_curve25519salsa20hmacsha512', 'crypto_box_curve25519salsa20hmacsha512_open', 'crypto_box_curve25519salsa20hmacsha512_beforenm', 'crypto_box_curve25519salsa20hmacsha512_afternm', 'crypto_box_curve25519salsa20hmacsha512_open_afternm']
+ 
+-def secretbox_salsa20hmacsha512(m, n, k):
+-  s = stream_salsa20(len(m) + 32, n, k)
++def crypto_secretbox_salsa20hmacsha512(m, n, k):
++  s = crypto_stream_salsa20(len(m) + 32, n, k)
+   c = xor(m, s[32:])
+-  a = auth_hmacsha512(c, s[:32])
++  a = crypto_auth_hmacsha512(c, s[:32])
+   return a + c
+ 
+-def secretbox_salsa20hmacsha512_open(c, n, k):
++def crypto_secretbox_salsa20hmacsha512_open(c, n, k):
+   if len(c) < 32: raise ValueError('Too short for Salsa20HMACSHA512 box')
+-  s = stream_salsa20(32, n, k)
+-  if not auth_hmacsha512_verify(c[:32], c[32:], s):
++  s = crypto_stream_salsa20(32, n, k)
++  if not crypto_auth_hmacsha512_verify(c[:32], c[32:], s):
+     raise ValueError('Bad authenticator for Salsa20HMACSHA512 box')
+-  s = stream_salsa20(len(c), n, k)
++  s = crypto_stream_salsa20(len(c), n, k)
+   return xor(c[32:], s[32:])
+ 
+ 
+-def box_curve25519salsa20hmacsha512_keypair():
+-  sk = randombytes(32)
+-  pk = smult_curve25519_base(sk)
++def crypto_box_curve25519salsa20hmacsha512_keypair():
++  sk = _randombytes(32)
++  pk = crypto_scalarmult_curve25519_base(sk)
+   return (pk, sk)
+ 
+-def box_curve25519salsa20hmacsha512(m, n, pk, sk):
+-  return box_curve25519salsa20hmacsha512_afternm(
+-    m, n, box_curve25519salsa20hmacsha512_beforenm(pk, sk))
+-
+-def box_curve25519salsa20hmacsha512_open(c, n, pk, sk):
+-  return box_curve25519salsa20hmacsha512_open_afternm(
+-    c, n, box_curve25519salsa20hmacsha512_beforenm(pk, sk))
++def crypto_box_curve25519salsa20hmacsha512(m, n, pk, sk):
++  return crypto_box_curve25519salsa20hmacsha512_afternm(
++    m, n, crypto_box_curve25519salsa20hmacsha512_beforenm(pk, sk))
++
++def crypto_box_curve25519salsa20hmacsha512_open(c, n, pk, sk):
++  return crypto_box_curve25519salsa20hmacsha512_open_afternm(
++    c, n, crypto_box_curve25519salsa20hmacsha512_beforenm(pk, sk))
+ 
+-def box_curve25519salsa20hmacsha512_beforenm(pk, sk):
+-    return hash_sha512(smult_curve25519(sk, pk))[:32]
++def crypto_box_curve25519salsa20hmacsha512_beforenm(pk, sk):
++    return crypto_hash_sha512(crypto_scalarmult_curve25519(sk, pk))[:32]
+ 
+-def box_curve25519salsa20hmacsha512_afternm(m, n, k):
+-  return secretbox_salsa20hmacsha512(m, n, k)
++def crypto_box_curve25519salsa20hmacsha512_afternm(m, n, k):
++  return crypto_secretbox_salsa20hmacsha512(m, n, k)
+ 
+-def box_curve25519salsa20hmacsha512_open_afternm(c, n, k):
+-  return secretbox_salsa20hmacsha512_open(c, n, k)
++def crypto_box_curve25519salsa20hmacsha512_open_afternm(c, n, k):
++  return crypto_secretbox_salsa20hmacsha512_open(c, n, k)
+diff -Nur mdempsky-dnscurve1/slownacl/salsa20.py mdempsky-dnscurve2/slownacl/salsa20.py
+--- mdempsky-dnscurve1/slownacl/salsa20.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/salsa20.py	2011-10-19 09:43:32.087121527 +0200
+@@ -1,7 +1,7 @@
+ import struct
+ from util import xor
+ 
+-__all__ = ['core_hsalsa20', 'stream_salsa20', 'stream_salsa20_xor', 'stream_xsalsa20', 'stream_xsalsa20_xor']
++__all__ = ['crypto_core_hsalsa20', 'crypto_stream_salsa20', 'crypto_stream_salsa20_xor', 'crypto_stream_xsalsa20', 'crypto_stream_xsalsa20_xor']
+ 
+ def rotate(x, n):
+   x &= 0xffffffff
+@@ -60,12 +60,12 @@
+   rounds(s, 20, False)
+   return struct.pack('<8I', *(s[::5] + s[6:10]))
+ 
+-def core_hsalsa20(n, k):
++def crypto_core_hsalsa20(n, k):
+   n = struct.unpack('<4I', n)
+   k = struct.unpack('<8I', k)
+   return hblock(n, k)
+ 
+-def stream_salsa20(l, n, k):
++def crypto_stream_salsa20(l, n, k):
+   output = []
+   n = struct.unpack('<2I', n)
+   k = struct.unpack('<8I', k)
+@@ -75,11 +75,11 @@
+     output.append(block(n, k))
+   return ''.join(output)[:l]
+ 
+-def stream_salsa20_xor(m, n, k):
+-  return xor(m, stream_salsa20(len(m), n, k))
++def crypto_stream_salsa20_xor(m, n, k):
++  return xor(m, crypto_stream_salsa20(len(m), n, k))
+ 
+-def stream_xsalsa20(l, n, k):
+-  return stream_salsa20(l, n[16:], core_hsalsa20(n[:16], k))
++def crypto_stream_xsalsa20(l, n, k):
++  return crypto_stream_salsa20(l, n[16:], crypto_core_hsalsa20(n[:16], k))
+ 
+-def stream_xsalsa20_xor(m, n, k):
+-  return xor(m, stream_xsalsa20_xor(len(m), n, k))
++def crypto_stream_xsalsa20_xor(m, n, k):
++  return xor(m, crypto_stream_xsalsa20_xor(len(m), n, k))
+diff -Nur mdempsky-dnscurve1/slownacl/sha512.py mdempsky-dnscurve2/slownacl/sha512.py
+--- mdempsky-dnscurve1/slownacl/sha512.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/sha512.py	2011-10-19 09:44:22.918620658 +0200
+@@ -1,22 +1,22 @@
+ import hashlib
+ from util import xor
+-from verify import verify32
++from verify import crypto_verify32
+ 
+-__all__ = ['hash_sha512', 'auth_hmacsha512', 'auth_hmacsha512_verify']
++__all__ = ['crypto_hash_sha512', 'crypto_auth_hmacsha512', 'crypto_auth_hmacsha512_verify']
+ 
+ # Python has an hmac module, but at least as of 2.5.1, it assumed a
+ # block size of 64 bytes regardless of hash function, whereas SHA-512
+ # uses a block size of 128 bytes.
+ 
+-def hash_sha512(m):
++def crypto_hash_sha512(m):
+   return hashlib.sha512(m).digest()
+ 
+-def auth_hmacsha512(m, k):
++def crypto_auth_hmacsha512(m, k):
+   if len(k) != 32: raise ValueError('Invalid key size for HMACSHA512')
+   def pad(c): return xor(chr(c) * 128, k + '\0' * 96)
+-  m = hash_sha512(pad(0x36) + m)
+-  m = hash_sha512(pad(0x5c) + m)
++  m = crypto_hash_sha512(pad(0x36) + m)
++  m = crypto_hash_sha512(pad(0x5c) + m)
+   return m[:32]
+ 
+-def auth_hmacsha512_verify(a, m, k):
+-  return verify32(a, auth_hmacsha512(m, k))
++def crypto_auth_hmacsha512_verify(a, m, k):
++  return crypto_verify32(a, auth_hmacsha512(m, k))
+diff -Nur mdempsky-dnscurve1/slownacl/test.py mdempsky-dnscurve2/slownacl/test.py
+--- mdempsky-dnscurve1/slownacl/test.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/test.py	2011-10-19 09:44:46.930899788 +0200
+@@ -12,10 +12,10 @@
+ 
+   def r(x):
+     if type(x) == int:
+-      return slownacl.randombytes(x)
++      return slownacl._randombytes(x)
+     elif type(x) == tuple:
+       length = random.randint(*x)
+-      return slownacl.randombytes(length)
++      return slownacl._randombytes(length)
+ 
+   for i in range(its):
+     args = [r(x) for x in arglens]
+@@ -39,10 +39,10 @@
+     print 'FAILED'
+ 
+ if __name__ == '__main__':
+-  check(1024, 'hash_sha512', [(1, 100)])
+-  check(1024, 'auth_hmacsha512', [(1, 100), 32])
+-  check(1024, 'onetimeauth_poly1305', [(1, 100), 32])
+-  check(256, 'smult_curve25519_base', [32])
+-  check(128, 'stream_salsa20_xor', [(0, 1024), 8, 32])
+-  check(128, 'stream_xsalsa20_xor', [(0, 1024), 24, 32])
+-  check(64, 'smult_curve25519', [32, 32])
++  check(1024, 'crypto_hash_sha512', [(1, 100)])
++  check(1024, 'crypto_auth_hmacsha512', [(1, 100), 32])
++  check(1024, 'crypto_onetimeauth_poly1305', [(1, 100), 32])
++  check(256, 'crypto_scalarmult_curve25519_base', [32])
++  check(128, 'crypto_stream_salsa20_xor', [(0, 1024), 8, 32])
++  check(128, 'crypto_stream_xsalsa20_xor', [(0, 1024), 24, 32])
++  check(64, 'crypto_scalarmult_curve25519', [32, 32])
+diff -Nur mdempsky-dnscurve1/slownacl/util.py mdempsky-dnscurve2/slownacl/util.py
+--- mdempsky-dnscurve1/slownacl/util.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/util.py	2011-10-19 09:38:40.546622690 +0200
+@@ -1,4 +1,4 @@
+-__all__ = ['xor', 'randombytes']
++__all__ = ['xor', '_randombytes']
+ 
+ def xor(s, t):
+   output = []
+@@ -7,5 +7,5 @@
+     output.append(chr(ord(s[i]) ^ ord(t[i])))
+   return ''.join(output)
+ 
+-def randombytes(n):
++def _randombytes(n):
+   return open('/dev/urandom').read(n)
+diff -Nur mdempsky-dnscurve1/slownacl/verify.py mdempsky-dnscurve2/slownacl/verify.py
+--- mdempsky-dnscurve1/slownacl/verify.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/verify.py	2011-10-19 09:39:09.551373797 +0200
+@@ -1,11 +1,11 @@
+-__all__ = ['verify16', 'verify32']
++__all__ = ['crypto_verify16', 'crypto_verify32']
+ 
+-def verify16(a, b):
++def crypto_verify16(a, b):
+   if len(a) != 16 or len(b) != 16:
+     raise ValueError('Not 16 bytes')
+   return 0 == reduce(lambda x, y: x | y, [ord(a) ^ ord(b) for (a,b) in zip(a,b)])
+ 
+-def verify32(a, b):
++def crypto_verify32(a, b):
+   if len(a) != 32 or len(b) != 32:
+     raise ValueError('Not 32 bytes')
+   return 0 == reduce(lambda x, y: x | y, [ord(a) ^ ord(b) for (a,b) in zip(a,b)])
+diff -Nur mdempsky-dnscurve1/slownacl/xsalsa20poly1305.py mdempsky-dnscurve2/slownacl/xsalsa20poly1305.py
+--- mdempsky-dnscurve1/slownacl/xsalsa20poly1305.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/slownacl/xsalsa20poly1305.py	2011-10-19 09:49:53.474621039 +0200
+@@ -1,43 +1,43 @@
+-from util import xor, randombytes
+-from salsa20 import core_hsalsa20, stream_xsalsa20
+-from poly1305 import onetimeauth_poly1305, onetimeauth_poly1305_verify
+-from curve25519 import smult_curve25519, smult_curve25519_base
++from util import xor, _randombytes
++from salsa20 import crypto_core_hsalsa20, crypto_stream_xsalsa20
++from poly1305 import crypto_onetimeauth_poly1305, crypto_onetimeauth_poly1305_verify
++from curve25519 import crypto_scalarmult_curve25519, crypto_scalarmult_curve25519_base
+ 
+-__all__ = ['secretbox_xsalsa20poly1305', 'secretbox_xsalsa20poly1305_open', 'box_curve25519xsalsa20poly1305_keypair', 'box_curve25519xsalsa20poly1305', 'box_curve25519xsalsa20poly1305', 'box_curve25519xsalsa20poly1305_open', 'box_curve25519xsalsa20poly1305_beforenm', 'box_curve25519xsalsa20poly1305_afternm', 'box_curve25519xsalsa20poly1305_open_afternm']
++__all__ = ['crypto_secretbox_xsalsa20poly1305', 'crypto_secretbox_xsalsa20poly1305_open', 'box_curve25519xsalsa20poly1305_keypair', 'box_curve25519xsalsa20poly1305', 'box_curve25519xsalsa20poly1305', 'box_curve25519xsalsa20poly1305_open', 'box_curve25519xsalsa20poly1305_beforenm', 'box_curve25519xsalsa20poly1305_afternm', 'box_curve25519xsalsa20poly1305_open_afternm']
+ 
+-def secretbox_xsalsa20poly1305(m, n, k):
+-  s = stream_xsalsa20(32 + len(m), n, k)
++def crypto_secretbox_xsalsa20poly1305(m, n, k):
++  s = crypto_stream_xsalsa20(32 + len(m), n, k)
+   c = xor(m, s[32:])
+-  a = onetimeauth_poly1305(c, s[:32])
++  a = crypto_onetimeauth_poly1305(c, s[:32])
+   return a + c
+ 
+-def secretbox_xsalsa20poly1305_open(c, n, k):
++def crypto_secretbox_xsalsa20poly1305_open(c, n, k):
+   if len(c) < 16: raise ValueError('Too short for XSalsa20Poly1305 box')
+-  s = stream_xsalsa20(32, n, k)
+-  if not onetimeauth_poly1305_verify(c[:16], c[16:], s):
++  s = crypto_stream_xsalsa20(32, n, k)
++  if not crypto_onetimeauth_poly1305_verify(c[:16], c[16:], s):
+     raise ValueError('Bad authenticator for XSalsa20Poly1305 box')
+-  s = stream_xsalsa20(16 + len(c), n, k)
++  s = crypto_stream_xsalsa20(16 + len(c), n, k)
+   return xor(c[16:], s[32:])
+ 
+ 
+-def box_curve25519xsalsa20poly1305_keypair():
+-  sk = randombytes(32)
+-  pk = smult_curve25519_base(sk)
++def crypto_box_curve25519xsalsa20poly1305_keypair():
++  sk = _randombytes(32)
++  pk = crypto_scalarmult_curve25519_base(sk)
+   return (pk, sk)
+ 
+-def box_curve25519xsalsa20poly1305(m, n, pk, sk):
+-  return box_curve25519xsalsa20poly1305_afternm(
+-      m, n, box_curve25519xsalsa20poly1305_beforenm(pk, sk))
+-
+-def box_curve25519xsalsa20poly1305_open(c, n, pk, sk):
+-  return box_curve25519xsalsa20poly1305_open_afternm(
+-      c, n, box_curve25519xsalsa20poly1305_beforenm(pk, sk))
++def crypto_box_curve25519xsalsa20poly1305(m, n, pk, sk):
++  return crypto_box_curve25519xsalsa20poly1305_afternm(
++      m, n, crypto_box_curve25519xsalsa20poly1305_beforenm(pk, sk))
++
++def crypto_box_curve25519xsalsa20poly1305_open(c, n, pk, sk):
++  return crypto_box_curve25519xsalsa20poly1305_open_afternm(
++      c, n, crypto_box_curve25519xsalsa20poly1305_beforenm(pk, sk))
+ 
+-def box_curve25519xsalsa20poly1305_beforenm(pk, sk):
+-  return core_hsalsa20('\0' * 16, smult_curve25519(sk, pk))
++def crypto_box_curve25519xsalsa20poly1305_beforenm(pk, sk):
++  return crypto_core_hsalsa20('\0' * 16, crypto_scalarmult_curve25519(sk, pk))
+ 
+-def box_curve25519xsalsa20poly1305_afternm(m, n, k):
+-  return secretbox_xsalsa20poly1305(m, n, k)
++def crypto_box_curve25519xsalsa20poly1305_afternm(m, n, k):
++  return crypto_secretbox_xsalsa20poly1305(m, n, k)
+ 
+-def box_curve25519xsalsa20poly1305_open_afternm(c, n, k):
+-  return secretbox_xsalsa20poly1305_open(c, n, k)
++def crypto_box_curve25519xsalsa20poly1305_open_afternm(c, n, k):
++  return crypto_secretbox_xsalsa20poly1305_open(c, n, k)
+diff -Nur mdempsky-dnscurve1/tools/dnsq.py mdempsky-dnscurve2/tools/dnsq.py
+--- mdempsky-dnscurve1/tools/dnsq.py	2010-06-04 18:49:50.000000000 +0200
++++ mdempsky-dnscurve2/tools/dnsq.py	2011-10-19 09:48:00.466873607 +0200
+@@ -33,7 +33,7 @@
+ import dns
+ import dnscurve
+ try:
+-    import nacl
++    import naclxx
+ except ImportError, e:
+     import slownacl as nacl
+ 
+@@ -58,11 +58,13 @@
+ 
+ query0 = dns.dns_build_query(type, name)
+ if pubkey:
+-    mykey = open('/dev/urandom').read(32)
+-    mypubkey = nacl.smult_curve25519_base(mykey)
+-    key = nacl.box_curve25519xsalsa20poly1305_beforenm(pubkey, mykey)
+     nonce1 = open('/dev/urandom').read(12)
+-    box = nacl.box_curve25519xsalsa20poly1305_afternm(query0, nonce1 + 12 * '\0', key)
++    mykey = open('/dev/urandom').read(32)
++    mypubkey = nacl.crypto_scalarmult_curve25519_base(mykey)
++    box = nacl.crypto_box_curve25519xsalsa20poly1305(query0, nonce1 + 12 * '\0', pubkey, mykey)
++    #XXX - TODO
++    #key = nacl.crypto_box_curve25519xsalsa20poly1305_beforenm(pubkey, mykey)
++    #box = nacl.crypto_box_curve25519xsalsa20poly1305_afternm(query0, nonce1 + 12 * '\0', key)
+     if zone is not False:
+         query = dnscurve.dnscurve_encode_txt_query(nonce1, box, mypubkey, zone)
+     else:
+@@ -81,7 +83,10 @@
+         nonce2, box = dnscurve.dnscurve_decode_streamlined_response(response)
+     if nonce2[:12] != nonce1:
+         raise "Response nonce didn't match"
+-    response = nacl.box_curve25519xsalsa20poly1305_open_afternm(box, nonce2, key)
++    #XXX - TODO
++    #response = nacl.crypto_box_curve25519xsalsa20poly1305_open_afternm(box, nonce2, key)
++    response = nacl.crypto_box_curve25519xsalsa20poly1305_open(box, nonce2, pubkey, mykey)
++
+ if query0[:2] != response[:2]:
+     raise "Response transaction ID (DNS) didn't match"
+ dns.dns_print(response)

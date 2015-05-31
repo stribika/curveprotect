@@ -1,0 +1,12 @@
+diff -Nur nacl-20110221.orig/crypto_stream/try.c nacl-20110221/crypto_stream/try.c
+--- nacl-20110221.orig/crypto_stream/try.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221/crypto_stream/try.c	2013-01-03 08:53:05.207195408 +0100
+@@ -60,6 +60,8 @@
+   long long i;
+   long long j;
+ 
++  crypto_stream_xor(c+4,m+4,TUNE_BYTES-4,n,k);
++
+   for (i = 0;i < CHECKSUM_BYTES;++i) {
+     long long mlen = i;
+     long long clen = i;

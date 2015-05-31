@@ -1,0 +1,419 @@
+#!/usr/bin/env python
+# 20110823
+# Jan Mojzis
+# Public domain.
+
+import header, lib, htmltemplate, os, sys, tcpping, curvecphello, dns, config
+
+try:
+        import nacl
+except ImportError:
+        import slownacl as nacl
+
+
+def getResolvConf():
+        """
+        """
+
+        ret = []
+
+        try:
+                f = open("/etc/resolv.conf")
+                for line in f.readlines():
+                        if len(line) < 12:
+                                continue
+                        if line[0:11] not in ['nameserver\t', 'nameserver ']:
+                                continue
+                        line = line[11:]
+                        line = line.strip()
+                        ret.append(line)
+        except:
+                pass
+        return ret
+
+def getClientExtension():
+        """
+        """
+
+        e = ""
+
+        try:
+                f = open("/etc/curvecpextension")
+                e = f.read()
+        except:
+                pass
+
+        if len(e) != 16:
+                e = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+        return e
+
+
+class Consumer(dns.DNSConsumer):
+        """
+        """
+
+        def __init__(self):
+                """
+                """
+
+                dns.DNSConsumer.__init__(self)
+
+        def result(self):
+                """
+                """
+                err = []
+                for (q,r) in self.queries_ok:
+                        hostip = "%s_%s" % (q.host, q.transport_init[0][0])
+                        ee = "Name error"
+                        if len(r.answers) == 0:
+                                if r.rcode:
+                                        ee = dns.errors.get(r.rcode, 'Unknown')
+                                err.append((hostip, ee.lower()))
+
+                for (q,ee) in self.queries_err:
+                        hostip = "%s_%s" % (q.host, q.transport_init[0][0])
+                        err.append((hostip, ee.lower()))
+
+                return err
+
+
+
+if __name__ == '__main__':
+
+        #XXX
+        resolvconfips = getResolvConf()
+        clientext = getClientExtension()
+
+        lib.limit_resources()
+
+        timeouts = [3,11]
+
+        page = ""
+        secs = 0
+        if os.getenv("QUERY_STRING") == "test":
+                page = "troubleshooting.dynhtml"
+
+        t = htmltemplate.Template("html/troubleshooting.html")
+        d = header.header("troubleshooting", page, secs)
+        d["connectivity"] = []
+        d["dns"] = []
+        d["dnscurve"] = []
+        d["dnscrypt"] = []
+        d["resolvconf"] = []
+        d["vpn"] = []
+        d["vpnresult"] = []
+        d["forwarder"] = []
+        d["forwarderresult"] = []
+        failedcount = 0
+        dnsfailedcount = 0
+        txtok = False
+        streamlinedok = False
+
+        tmp = {}
+        tmp["value"] = "Connectivity not tested"
+        tmp["class"] = " warn"
+        d["connectivityresult"] = [tmp]
+
+        tmp = {}
+        tmp["value"] = "DNS zones not tested"
+        tmp["class"] = " warn"
+        d["dnsresult"] = [tmp]
+
+        tmp = {}
+        tmp["value"] = "DNSCurve not tested"
+        tmp["class"] = " warn"
+        d["dnscurveresult"] = [tmp]
+
+        tmp = {}
+        tmp["value"] = "DNSCrypt resolver not tested"
+        tmp["class"] = " warn"
+        d["dnscryptresult"] = [tmp]
+
+        tmp = {}
+        tmp["value"] = "resolv.conf not tested"
+        tmp["class"] = " warn"
+        d["resolvconfresult"] = [tmp]
+
+        tmp = {}
+        tmp["value"] = "VPN configuration not tested"
+        tmp["class"] = " warn"
+        d["vpnresult"] = [tmp]
+
+        tmp = {}
+        tmp["value"] = "forwarder configuration not tested"
+        tmp["class"] = " warn"
+        d["forwarderresult"] = [tmp]
+
+        if os.getenv("QUERY_STRING") == "test":
+                d["wait"] = [{}]
+                t.write(d)
+                sys.exit(0)
+        d["wait"] = []
+
+        tc = tcpping.Consumer()
+        for ip in config.testips:
+                tcpping.Ping(host = ip, consumer = tc, timeout = 11)
+        tcpping.doit(tc)
+
+        (ok,failed) = tc.result()
+        if len(ok) == 0:
+                for (host,err) in failed:
+                        tmp = {}
+                        tmp["value"] = "%s: ping failed: %s" % (host, err)
+                        tmp["class"] = " warn"
+                        d["connectivity"].append(tmp)
+                tmp = {}
+                tmp["value"] = "Check Your internet connectivity!!! It will NOT work, sorry."
+                tmp["class"] = " fatal"
+                d["connectivityresult"] = [tmp]
+
+        else:
+                tmp = {}
+                tmp["value"] = "No problems detected, Your internet connectivity is OK"
+                tmp["class"] = ""
+                d["connectivityresult"] = [tmp]
+
+                dctxt = Consumer()
+                dcstr = Consumer()
+                qc = []
+
+                ipkeys = dns.dnsns(config.testzone)
+                for (ip,key) in ipkeys:
+                        q = dns.dns_create_query(config.testzone,"ns",[(ip,key,config.testzone)],timeouts,0)
+                        qc.append((q,dctxt))
+                        q = dns.dns_create_query(config.testzone,"ns",[(ip,key,"")],timeouts,0)
+                        qc.append((q,dcstr))
+
+                dns.doit(qc)
+                txterrors = dctxt.result()
+                strerrors = dcstr.result()
+
+                if len(ipkeys) > len(strerrors):
+                        tmp = {}
+                        tmp["value"] = "No problems detected, You can safely use Streamlined DNSCurve"
+                        tmp["class"] = ""
+                        d["dnscurveresult"] = [tmp]
+                else:
+                        if len(ipkeys) > len(txterrors):
+                                tmp = {}
+                                tmp["value"] = "Problem with Streamlined DNSCurve, switch to TXT DNSCurve immediately"
+                                tmp["class"] = " warn"
+                                d["dnscurveresult"] = [tmp]
+                        else:
+                                tmp = {}
+                                tmp["value"] = "Both (TXT and Streamlined) tests failed, Your provider is probably redirecting the DNS traffic to a local resolver"
+                                tmp["class"] = " warn"
+                                d["dnscurveresult"] = [tmp]
+
+                #DNS
+                dc = Consumer()
+                qc = []
+
+                dncurvetxt = True
+                try:
+                        dnscurvetype = lib.openreadcloseescape("etc/dnscache/env/DNSCURVETYPE")
+                except:
+                        pass
+                else:
+                        if dnscurvetype[0] == 1:
+                                dncurvetxt = False
+
+                for fn in os.listdir("etc/dnscache/root/servers"):
+        
+                        f = open("etc/dnscache/root/servers/%s" % fn)
+                        if fn == "@":
+                                fn = "."
+                        for v in f.readlines():
+                                if v[-1] == '\n':
+                                        v = v[0:-1]
+                                try:
+                                        (ip,key) = v.split("|")
+                                except ValueError:
+                                        ip = v
+                                        key = ""
+
+                                zone = ""
+                                if key:
+                                        if dncurvetxt:
+                                                zone = fn
+                                q = dns.dns_create_query(fn,"ns",[(ip,key,zone)],timeouts,0)
+                                qc.append((q,dc))
+                        f.close()
+                dns.doit(qc)
+                errors = dc.result()
+                for (errhost, errreason) in errors:
+                        tmp = {}
+                        tmp["class"] = " warn"
+                        tmp["value"] = "%s: check failed: %s" % (errhost, errreason)
+                        d["dns"].append(tmp)
+
+                if len(errors) > 0:
+                        tmp = {}
+                        tmp["value"] = "Some zone tests failed, check the configuration !!!!!"
+                        tmp["class"] = " warn"
+                        d["dnsresult"] = [tmp]
+                else:
+                        tmp = {}
+                        tmp["value"] = "No problems detected, Your DNS zones are OK"
+                        tmp["class"] = ""
+                        d["dnsresult"] = [tmp]
+
+
+        tc = tcpping.Consumer()
+        tcpping.Ping(host = config.dnscryptcacheip, consumer = tc, timeout = 4, ignorerefused = False)
+        tcpping.doit(tc)
+
+        (ok,failed) = tc.result()
+        if len(ok) == 0:
+                tmp = {}
+                tmp["value"] = "DNSCrypt resolver not configured"
+                tmp["class"] = " warn"
+                d["dnscryptresult"] = [tmp]
+        else:
+                qc = []
+                c = Consumer()
+                q = dns.dns_create_query(config.testzone, "ns", [(config.dnscryptcacheip,"",config.testzone)],timeouts,1)
+                qc.append((q,c))
+                dns.doit(qc)
+                errors = c.result()
+
+                if len(errors) == 0:
+                        tmp = {}
+                        tmp["value"] = "No problems detected, Your DNSCrypt resolver is OK"
+                        tmp["class"] = ""
+                        d["dnscryptresult"] = [tmp]
+                else:
+                        tmp = {}
+                        tmp["value"] = "DNSCrypt resolver tests failed, check the configuration !!!!!"
+                        tmp["class"] = " fatal"
+                        d["dnscryptresult"] = [tmp]
+
+        if len(resolvconfips) == 0:
+                tmp = {}
+                tmp["value"] = "resolv.conf test failed, no nameserver lines in /etc/resolv.conf, check Your /etc/resolv.conf !!!!!"
+                tmp["class"] = " fatal"
+                d["resolvconfresult"] = [tmp]
+        else:
+                if resolvconfips[0] in [config.dnscacheip, config.dnscryptcacheip]:
+                        tmp = {}
+                        tmp["value"] = "No problems detected, Your /etc/resolv.conf is OK"
+                        tmp["class"] = ""
+                        d["resolvconfresult"] = [tmp]
+                else:
+                        tmp = {}
+                        tmp["value"] = "resolv.conf test failed, You are not using Curveprotect's DNS resolvers, You are using %s" % (str(resolvconfips))
+                        tmp["class"] = " warn"
+                        d["resolvconfresult"] = [tmp]
+
+        #forwarder
+        x = []
+        dnsfailed = []
+        for i in range(0,99):
+                name = "forwarder%02d" % (i)
+
+                if not os.path.exists("etc/%s" % (name)):
+                        continue
+
+                try:
+                        port = lib.openreadcloseescape("etc/%s/env/PORT" % (name))
+                except:
+                        port = ""
+                try:
+                        server = lib.openreadcloseescape("etc/%s/env/SERVER" % (name))
+                except:
+                        server = ""
+                if server and port:
+                        x.append((server, port))
+
+        if len(x) == 0:
+                tmp = {}
+                tmp["value"] = "no forwarder configured"
+                tmp["class"] = " warn"
+                d["forwarderresult"] = [tmp]
+        else:
+                hc = curvecphello.Consumer()
+                for (server,port) in x:
+                        r = dns.dnsa(server)
+                        if len(r) == 0:
+                                failed.append((server, "dns record not found"))
+                        else:
+                                for (ip,key,ext) in dns.dnsa(server):
+                                        host = "%s_%s:%s" % (server, ip, port)
+                                        curvecphello.Hello(host = host, ip = ip, port = int(port), key = lib.fromhex(key), ext = lib.fromhex(ext), consumer = hc, timeout = 5, clientext = clientext)
+                curvecphello.doit(hc)
+                (ok,failed) = hc.result()
+                for dd in dnsfailed:
+                        failed.append(dd)
+                if len(failed) != 0:
+                        for (host,err) in failed:
+                                tmp = {}
+                                tmp["value"] = "%s: curvecp hello test failed: %s" % (host, err)
+                                tmp["class"] = " warn"
+                                d["forwarder"].append(tmp)
+                        tmp = {}
+                        tmp["value"] = "Some forwarder tests failed, CurveCP packets are filtered or forwarder configuration is bad"
+                        tmp["class"] = " warn"
+                        d["forwarderresult"] = [tmp]
+                else:
+                        tmp = {}
+                        tmp["value"] = "No problems detected, CurveCP packets are not filtred"
+                        tmp["class"] = ""
+                        d["forwarderresult"] = [tmp]
+
+
+        #VPN
+        x = []
+        dnsfailed = []
+        for i in range(0,99):
+                name = "vpn%02d" % (i)
+
+                if not os.path.exists("etc/%s" % (name)):
+                        continue
+
+                try:
+                        port = lib.openreadcloseescape("etc/%s/env/PORT" % (name))
+                except:
+                        port = ""
+                try:
+                        server = lib.openreadcloseescape("etc/%s/env/SERVER" % (name))
+                except:
+                        server = ""
+                if server and port:
+                        x.append((server, port))
+
+        if len(x) == 0:
+                tmp = {}
+                tmp["value"] = "no VPN configured"
+                tmp["class"] = " warn"
+                d["vpnresult"] = [tmp]
+        else:
+                hc = curvecphello.Consumer()
+                for (server,port) in x:
+                        r = dns.dnsa(server)
+                        if len(r) == 0:
+                                dnsfailed.append((server, "dns record not found"))
+                        else:
+                                for (ip,key,ext) in r:
+                                        host = "%s_%s:%s" % (server, ip, port)
+                                        curvecphello.Hello(host = host, ip = ip, port = int(port), key = lib.fromhex(key), ext = lib.fromhex(ext), consumer = hc, timeout = 5, clientext = clientext)
+                curvecphello.doit(hc)
+                (ok,failed) = hc.result()
+                for dd in dnsfailed:
+                        failed.append(dd)
+                if len(failed) != 0:
+                        for (host,err) in failed:
+                                tmp = {}
+                                tmp["value"] = "%s: curvecp hello test failed: %s" % (host, err)
+                                tmp["class"] = " warn"
+                                d["vpn"].append(tmp)
+                        tmp = {}
+                        tmp["value"] = "Some VPN tests failed, CurveCP packets are filtered or VPN configuration is bad"
+                        tmp["class"] = " warn"
+                        d["vpnresult"] = [tmp]
+                else:
+                        tmp = {}
+                        tmp["value"] = "No problems detected, CurveCP packets are not filtred"
+                        tmp["class"] = ""
+                        d["vpnresult"] = [tmp]
+
+        t.write(d)

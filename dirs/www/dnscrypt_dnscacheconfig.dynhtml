@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+# 20121227
+# Jan Mojzis
+# Public domain.
+
+
+import cgi, lib, config, time
+
+try:
+        lib.limit_resources()
+        q = cgi.parse()
+
+        action = q['submit'][0]
+        controlfn = "%s/dnscryptcache/supervise/control" % (config.servicedir)
+        dcontrolfn = "%s/dnscryptcachedownload/supervise/control" % (config.servicedir)
+
+        if action == "clean cache":
+                lib.openwriteclose(controlfn,"i")
+        elif action == "restart":
+                lib.openwriteclose(controlfn,"t")
+        elif action == "change":
+
+                # CACHESIZE
+                try:
+                        cachesize = int(q['cachesize'][0].strip())
+                        if cachesize < 1000000 or cachesize > 1000000000:
+                                raise ValueError("cachesize must be in range 1000000 - 1000000000")
+
+                except (KeyError):
+                        pass
+                else:
+                        cachesizefn="etc/dnscryptcache/env/CACHESIZE"
+                        datalimitfn="etc/dnscryptcache/env/DATALIMIT"
+                        cachesizeenv = int(lib.openreadcloseescape(cachesizefn))
+                        if cachesize != cachesizeenv:
+                                datalimit = int(1.03*cachesize + 10000000)
+                                lib.openwritecloserename(cachesizefn,str(cachesize),"etc")
+                                lib.openwritecloserename(datalimitfn,str(datalimit),"etc")
+
+                try:
+                        zone = q['zone'][0].strip()
+                        #XXX check
+                except:
+                        zone = ""
+
+                try:
+                        ip = q['ip'][0].strip()
+                        #XXX check
+                except:
+                        ip = ""
+
+                try:
+                        magic = q['magic'][0].strip()
+                        if len(magic) != 8:
+                                raise Exception("Bad magic")
+                except:
+                        magic = "r6fnvWj8"
+
+                try:
+                        ed25519keydir = "/%s/%s/%s" % (lib.basedir, lib.ed25519_keydir, q['ed25519keydir'][0])
+                except:
+                        ed25519keydir = ""
+
+
+                # keydir
+                try:
+                        keydir="/%s/%s/%s" % (lib.basedir, lib.dnscurve_keydir, q['keydir'][0])
+                except:
+                        keydir=""
+
+                fn="etc/dnscryptcache/env/KEYDIR"
+                if keydir == "":
+                        lib.tryunlink(fn)
+                else:
+                        lib.openwritecloserename(fn, keydir,"etc")
+
+
+                if not zone or not ip or not magic or not ed25519keydir:
+                        lib.tryunlink("etc/dnscryptcache/env/DNSCRYPTZONE")
+                        lib.tryunlink("etc/dnscryptcache/env/DNSCRYPTIP")
+                        lib.tryunlink("etc/dnscryptcache/env/RESPONSEMAGIC")
+                        lib.tryunlink("etc/dnscryptcache/env/ED25519KEYDIR")
+                else:
+                        lib.openwritecloserename("etc/dnscryptcache/env/DNSCRYPTZONE", zone, "etc")
+                        lib.openwritecloserename("etc/dnscryptcache/env/DNSCRYPTIP", ip, "etc")
+                        lib.openwritecloserename("etc/dnscryptcache/env/RESPONSEMAGIC", magic, "etc")
+                        lib.openwritecloserename("etc/dnscryptcache/env/ED25519KEYDIR", ed25519keydir, "etc")
+
+                lib.openwriteclose(controlfn,"t")
+                lib.openwriteclose(dcontrolfn,"t")
+                time.sleep(2)
+        else:
+                raise ValueError("Unknown submit value")
+
+except:
+        lib.print_refresh_failed("dnscrypt")
+else:
+        lib.print_refresh_success("dnscrypt")

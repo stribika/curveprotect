@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+# 20110926
+# Jan Mojzis
+# Public domain.
+
+import sys, cgi, os, lib, check, config
+
+try:
+        lib.limit_resources()
+        q = cgi.parse()
+
+        try:
+                name = q['name'][0]
+                check.name(name)
+                if name[0:3] != "vpn":
+                        raise ValueError("x")
+                dummy=int(name[4:])
+        except:
+                name = ""
+
+        action = q['submit'][0]
+
+        controlfn = "%s/%s/supervise/control" % (config.servicedir, name)
+        sadfn = "%s/addremoveservice/supervise/control" % (config.servicedir)
+        if action == "stop":
+                lib.openwriteclose(controlfn, "d")
+        elif action == "start":
+                lib.openwriteclose(controlfn, "u")
+        elif action == "restart":
+                lib.openwriteclose(controlfn, "t")
+        elif action == "change" or action == "add" or action == "remove":
+
+                try:
+                        port = int(q['port'][0].strip())
+                        check.port(port)
+                except:
+                        port = 0
+
+                try:
+                        server=q['host'][0].strip()
+                except:
+                        server=""
+
+                try:
+                        keydir="/%s/%s/%s" % (lib.basedir, lib.curvecp_keydir, q['keydir'][0])
+                except:
+                        keydir=""
+
+                if not name:
+                        raise ValueError("name not set")
+
+                if action == "remove":
+                        port = 0
+                        server=""
+                        keydir=""
+
+                if not os.path.exists("etc/%s/env" % (name)):
+                        raise ValueError("etc/%s/env: doesn't exist" % (name))
+
+                if not os.path.exists("%s/%s/supervise" % (config.servicedir, name)):
+                        raise ValueError("%s/%s/supervise: doesn't exist" % (config.servicedir, name))
+
+                if not server or not keydir or port == 0:
+                        lib.tryunlink("etc/%s/env/SERVER" % (name))
+                        lib.tryunlink("etc/%s/env/KEYDIR" % (name))
+                        lib.tryunlink("etc/%s/env/PORT" % (name))
+                        lib.recursiverrm("etc/%s/root/ip" % (name))
+                        lib.recursiverrm("etc/%s/root/route" % (name))
+
+                else:
+                        fn = "etc/%s/env/SERVER" % (name)
+                        lib.openwritecloserename(fn, server, "etc")
+
+                        fn = "etc/%s/env/PORT" % (name)
+                        lib.openwritecloserename(fn, str(port), "etc")
+
+                        fn = "etc/%s/env/KEYDIR" % (name)
+                        lib.openwritecloserename(fn, keydir, "etc")
+
+                lib.openwriteclose(controlfn,"t")
+                lib.openwriteclose(sadfn,"t")
+        else:
+                raise ValueError("Unknown submit value")
+except:
+        lib.print_refresh_failed("vpn")
+else:
+        lib.print_refresh_success("vpn")
+

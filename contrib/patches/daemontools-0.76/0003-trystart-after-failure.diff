@@ -1,0 +1,32 @@
+diff -Nur admin.orig/daemontools-0.76/src/supervise.c admin/daemontools-0.76/src/supervise.c
+--- admin.orig/daemontools-0.76/src/supervise.c	2010-02-19 11:08:15.000000000 +0100
++++ admin/daemontools-0.76/src/supervise.c	2010-02-19 12:53:16.000000000 +0100
+@@ -86,6 +86,8 @@
+ 
+ const char *run[2] = { "./run", 0 };
+ 
++int flagfailed = 0;
++
+ void trystart(void)
+ {
+   int f;
+@@ -94,6 +96,7 @@
+     case -1:
+       strerr_warn4(WARNING,"unable to fork for ",dir,", sleeping 60 seconds: ",&strerr_sys);
+       deepsleep(60);
++      flagfailed = 1;
+       trigger();
+       return;
+     case 0:
+@@ -153,6 +156,11 @@
+       }
+     }
+ 
++    if (flagfailed && flagwant && flagwantup){
++      flagfailed = 0;
++      trystart();
++    }
++
+     if (read(fdcontrol,&ch,1) == 1)
+       switch(ch) {
+ 	case 'd':

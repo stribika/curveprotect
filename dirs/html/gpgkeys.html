@@ -1,0 +1,69 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<script type="text/javascript">
+function confirmSubmit(x) {
+    return confirm("Key will be permanently removed. Are You sure?");
+}
+</script>
+
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_keys.css
+</style>
+
+<div class="header">
+GPG - verification keys
+</div>
+<div class="note">
+GPG verification keys are used for:
+<li>DNS resolver: for verification downloaded root/arpa DNS zones</li>
+</div>
+
+<div class="line label">
+  <div class="keys-name">key-id</div>
+  <div class="keys-pk"></div>
+  <div class="keys-mtime">expiration</div>
+  <div class="keys-submit"></div>
+  <div class="keys-status"></div>
+</div><div class="lineend"></div>
+
+
+%TEMPLATE_BLOCKBEGIN_newkey%
+<div class="line">
+  <form name="input" action="gpgkeys_config.dynhtml" method="get">
+    <div class="keys-name"  ><input type="text"   class="keys-name"  name="name"   value="" /></div>
+    <div class="keys-pk"    ><input type="text"   class="keys-pk"    name="pk"     value="" readonly/></div>
+    <div class="keys-mtime" ><input type="text"   class="keys-mtime" name="mtime"  value="" readonly/></div>
+    <input type="hidden" name="keytype" value="%TEMPLATE_VARIABLE_keytype%">
+    <div class="keys-submit"><input type="submit" class="submit"     name="submit" value="import" /></div>
+  </form>
+</div><div class="lineend"></div>
+<div class="keys-separator"></div>
+
+<div class="line label">
+  <div class="keys-name"></div>
+  <div class="keys-pk"></div>
+  <div class="keys-mtime"></div>
+  <div class="keys-submit"></div>
+  <div class="keys-status"></div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_newkey%
+
+
+%TEMPLATE_BLOCKBEGIN_keys%
+<div class="line">
+  <form name="input" action="gpgkeys_config.dynhtml" method="get">
+    <div class="keys-name"  ><input type="text"   class="keys-name"  name="name"   value="%TEMPLATE_VARIABLE_name%" readonly/></div>
+    <div class="keys-pk"    ><input type="text"   class="keys-pk"    name="pk"     value="%TEMPLATE_VARIABLE_pk%" readonly/></div>
+    <div class="keys-mtime" ><input type="text"   class="keys-mtime%TEMPLATE_VARIABLE_class%" name="mtime"  value="%TEMPLATE_VARIABLE_tm%" readonly/></div>
+    <input type="hidden" name="keytype" value="%TEMPLATE_VARIABLE_keytype%">
+    <div class="keys-submit">
+%TEMPLATE_BLOCKBEGIN_removebutton%
+      <input type="submit" class="submit"     name="submit" value="remove" onClick="return confirmSubmit(this)"/>
+%TEMPLATE_BLOCKEND_removebutton%
+    </div>
+  </form>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_keys%
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html

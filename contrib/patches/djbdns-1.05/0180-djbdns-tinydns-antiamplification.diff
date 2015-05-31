@@ -1,0 +1,11 @@
+diff -Nur djbdns-1.05/server.c djbdns-1.05.new/server.c
+--- djbdns-1.05/server.c	2013-05-30 12:40:34.617834658 +0200
++++ djbdns-1.05.new/server.c	2013-05-30 15:41:36.058280837 +0200
+@@ -110,6 +110,7 @@
+     if (len < 0) continue;
+     if (!doit()) continue;
+     if (response_len > 512) response_tc();
++    if (response_len > 9 * len) response_tc(); /* antiamplification */
+     socket_send4(udp53,response,response_len,ip,port);
+     /* may block for buffer space; if it fails, too bad */
+   }

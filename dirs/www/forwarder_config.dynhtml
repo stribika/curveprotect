@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+# 20110927
+# Jan Mojzis
+# Public domain.
+
+import sys, cgi, os, check, lib, config
+
+try:
+        lib.limit_resources()
+        q = cgi.parse()
+
+        try:
+                name = q['name'][0]
+                check.name(name)
+                if name[0:9] != "forwarder":
+                        raise ValueError("x")
+                dummy=int(name[10:])
+        except:
+                name = ""
+
+        action = q['submit'][0]
+        if action == "change" or action == "add" or action == "remove":
+
+                try:
+                        ip=q['ip'][0]
+                        check.ip4(ip)
+                except:
+                        ip = ""
+
+                try:
+                        port = int(q['port'][0].strip())
+                        check.port(port)
+                except:
+                        port = 0
+
+                try:
+                        server=q['host'][0].strip()
+                except:
+                        server=""
+
+                try:
+                        keydir="/%s/%s/%s" % (lib.basedir, lib.curvecp_keydir, q['keydir'][0])
+                except:
+                        keydir=""
+
+                try:
+                        selector = q['selector'][0][0]
+                except:
+                        selector = None
+
+                clientfirst = True
+                try:
+                        if q['start'][0] in ["clientfirst"]:
+                                clientfirst = True
+                        else:
+                                clientfirst = False
+                except:
+                        pass
+
+
+                try:
+                        proto = q['proto'][0]
+                except (KeyError, ValueError):
+                        proto = None
+                else:
+                        selector = lib.protocols[proto]["selector"]
+                        if selector == " ":
+                                selector = None
+                        if lib.protocols[proto]["start"] in ["clientfirst"]:
+                                clientfirst = True
+                        else:
+                                clientfirst = False
+
+                if not name:
+                        raise ValueError("name not set")
+
+                if not os.path.exists("etc/%s/env" % (name)):
+                        raise ValueError("etc/%s/env: doesn't exist" % (name))
+
+                if not os.path.exists("%s/%s/supervise" % (config.servicedir, name)):
+                        raise ValueError("%s/%s/supervise: doesn't exist" % (config.servicedir, name))
+
+                if not server or port == 0 or not ip or action == "remove":
+                        server = ""
+                        ip = None
+                        port = 0
+                        clientfirst = None
+                        selector = None
+                        keydir = None
+                        proto = None
+
+
+                #server
+                fn = "etc/%s/env/SERVER" % (name)
+                if server:
+                        lib.openwritecloserename(fn, server, "etc")
+                else:
+                        lib.tryunlink(fn)
+
+                fn = "etc/%s/env/IP" % (name)
+                if ip:
+                        lib.openwritecloserename(fn, ip, "etc")
+                else:
+                        lib.tryunlink(fn)
+
+                fn = "etc/%s/env/PORT" % (name)
+                if port > 0:
+                        lib.openwritecloserename(fn, str(port), "etc")
+                else:
+                        lib.tryunlink(fn)
+
+
+                fn = "etc/%s/env/CLIENTFIRST" % (name)
+                if clientfirst:
+                        lib.openwritecloserename(fn, "1", "etc")
+                else:
+                        lib.tryunlink(fn)
+
+                fn = "etc/%s/env/SELECTOR" % (name)
+                if selector:
+                        lib.openwritecloserename(fn, selector, "etc")
+                else:
+                        lib.tryunlink(fn)
+
+                fn = "etc/%s/env/KEYDIR" % (name)
+                if keydir:
+                        lib.openwritecloserename(fn, keydir, "etc")
+                else:
+                        lib.tryunlink(fn)
+
+                fn = "etc/%s/env/PROTOCOL" % (name)
+                if proto:
+                        lib.openwritecloserename(fn, proto, "etc")
+                else:
+                        lib.tryunlink(fn)
+
+        controlfn = "%s/%s/supervise/control" % (config.servicedir, name)
+        lib.openwriteclose(controlfn,"t")
+        sadfn = "%s/addremoveservice/supervise/control" % (config.servicedir)
+        lib.openwriteclose(sadfn,"t")
+except:
+        lib.print_refresh_failed("forwarder")
+else:
+        lib.print_refresh_success("forwarder")
+

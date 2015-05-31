@@ -1,0 +1,257 @@
+#!/usr/bin/env python
+# 20110926
+# Jan Mojzis
+# Public domain.
+
+import os, lib, header, htmltemplate, time, sys, config
+
+
+
+def get(name = ""):
+        """
+        """
+
+        x = lib.openreadallcloseescape(name)
+        while True:
+                if len(x) > 0 and x[-1] == '\n':
+                        x = x[0:-1]
+                        continue
+                break
+        return x
+
+
+try:
+        lib.limit_resources()
+
+
+        t = htmltemplate.Template("html/dns.html")
+        d = header.header("dns")
+
+        #default services
+        d["services"] = []
+        for x in ["DNSCurveAnchor", "DNSAnchor", "AXFRDownload", "HTTPDownload"]:
+                tmp = {}
+                tmp["service"] = x
+                if x == "DNSCurveAnchor":
+                        tmp["sl"]='selected="selected"'
+                else:
+                        tmp["sl"] = ''
+
+                d["services"].append(tmp)
+
+
+        #default verification keys
+        d["ed25519keys"] = []
+        for key in lib.ed25519_keys():
+                tmp = {}
+                tmp["sl"] = ""
+                tmp["key"] = key
+                d["ed25519keys"].append(tmp)
+
+        #default authorization keys
+        d["curvecpkeys"] = []
+        for key in lib.curvecp_keys():
+                tmp = {}
+                tmp["sl"] = ""
+                tmp["key"] = key
+                d["curvecpkeys"].append(tmp)
+
+
+        #dnscache
+        tmp = {}
+        tmp["cachesize"] = lib.openreadcloseescape("etc/dnscache/env/CACHESIZE")
+
+        dnscurvetype = "3"
+        try:
+                dnscurvetype = lib.openreadcloseescape("etc/dnscache/env/DNSCURVETYPE")
+        except:
+                pass
+
+	tmp["tch"]= ''
+	tmp["sch"]= ''
+	tmp["mch"]= 'selected="selected"'
+
+        if dnscurvetype[0] == "1":
+                tmp["sch"]='selected="selected"'
+		tmp["mch"]= ''
+        if dnscurvetype[0] == "2":
+                tmp["tch"]='selected="selected"'
+		tmp["mch"]= ''
+
+
+        #dnscurve keys
+        try:
+                keydir = lib.openreadcloseescape("etc/dnscache/env/KEYDIR")
+                mykey  = os.path.basename(keydir)
+        except:
+                keydir = ""
+                mykey  = ""
+
+        tmp["keys"] = []
+        mykey = os.path.basename(keydir)
+        for key in lib.dnscurve_keys():
+                if mykey == key:
+                        sl='selected="selected"'
+                else:
+                        sl = ''
+                tmp1 = {}
+                tmp1["sl"] = sl
+                tmp1["key"] = key
+                tmp["keys"].append(tmp1)
+
+        #dnscache status
+        tmp["status"] = lib.svc("%s/dnscache" % (config.servicedir))
+
+        #dnscache ip
+        tmp["ip"] = config.dnscacheip
+
+        d["dnscache"] = [tmp]
+
+
+        #dnsroot + dnslocal
+        d["dnsroot"] = []
+        d["dnslocal"] = []
+        for f in os.listdir("etc/dnscache/root/servers"):
+
+                #zone name
+                tmp = {}
+                if f == "@":
+                        tmp["zone"] = "."
+                else:
+                        tmp["zone"] = f
+                data = lib.openreadallcloseescape("etc/dnscache/root/servers/%s" % (f))
+
+                #root, local, local/anchor
+                service = "dnslocal"
+                if f in ["@", "arpa", "root-servers.net"]:
+                        service = "dnsroot"
+
+                if os.path.exists("etc/dnslocal/conf/%s" % (f)):
+                        tmp["config"] = ""
+                else:
+                        tmp["config"] = data.replace('\n',',')
+                        while True:
+                                if len(tmp["config"]) > 0 and tmp["config"][-1] == ',':
+                                        tmp["config"] = tmp["config"][0:-1]
+                                        continue
+                                break
+                        tmp["dnslocaldownload"] = []
+                        if tmp["config"].find(":") != -1:
+                                tmp["service"] = "DNSCurveAnchor"
+                        else:
+                                tmp["service"] = "DNSAnchor"
+
+
+                #mtime
+                try:
+                        mtime = lib.getmtime("var/dnslocal/zones/%s" % (f))
+                except:
+                        mtime = 0
+
+                #try:
+                #        mtime = lib.getmtime("var/%s/stamp/%s" % (service,f))
+                #except:
+                #        pass
+                tmp["tm"] = time.strftime('%Y.%m.%d %H:%M:%S',time.localtime(mtime))
+
+                #XXX - keys
+                tmp["ed25519keys"] = []
+                tmp["curvecpkeys"] = []
+
+                #XXX - class
+                tmp["keydirclass"] = "x"
+
+
+                tmp["conf"] = ""
+                tmp["service"] = ""
+
+                #interval
+                try:
+                        interval = int(get("etc/dnslocal/conf/%s/period" % f))
+                except:
+                        interval = 0
+                if interval > 0:
+                        tmp["interval"] = str(interval)
+                else:
+                        tmp["interval"] = ""
+
+                #type
+                try:
+                        tmp["service"] = get("etc/dnslocal/conf/%s/type" % f)
+                except:
+                        tmp["service"] = ""
+
+                #config
+                try:
+                        if tmp["service"] == "AXFRDownload":
+                                tmp["conf"] = get("etc/dnslocal/conf/%s/config" % f).replace("\n", ",")
+                        if tmp["service"] == "HTTPDownload":
+                                tmp["conf"] = get("etc/dnslocal/conf/%s/config" % f).replace("\n", ",")
+                except:
+                        pass
+
+                #authkey
+                try:
+                        k = lib.openreadallcloseescape("etc/dnslocal/conf/%s/ed25519dir" % f)
+                        k = os.path.basename(k)
+                        k = k.strip()
+                        tmp1 = {}
+                        tmp1["sl"] = 'selected="selected"'
+                        tmp1["key"] = k
+                        tmp["ed25519keys"] = [tmp1]
+                        tmp["keydirclass"] = "" #XXX
+                except:
+                        pass
+
+
+
+
+
+                #class
+                if mtime + 1.5*interval > time.time():
+                        tmp["class"] = ""
+                else:
+                        if mtime > 0:
+                                tmp["class"] = " warn"
+                        else:
+                                tmp["class"] = " fatal"
+
+                if tmp["config"] != "":
+                        tmp["tm"] = ""
+                        tmp["class"] = ""
+                        tmp["dnslocaldownload"] = []
+                        if tmp["config"].find("|") != -1:
+                                tmp["service"] = "DNSCurveAnchor"
+                        else:
+                                tmp["service"] = "DNSAnchor"
+                        tmp["conf"] = tmp["config"]
+                else:
+                        tmp["dnslocaldownload"] = [{"name":tmp["zone"]}]
+
+                #tmp["conf"] = tmp["config"]
+                #tmp["dnslocaldownload"] = [{"name":tmp["zone"]}]
+
+                d[service].append(tmp)
+
+        #dnslocalcdb
+        for service in ["dnslocal"]:
+                tmp = {}
+
+                #mtime
+                try:
+                        mtime = lib.getmtime("var/%s/root/data.cdb" % (service))
+                except:
+                        mtime = 0
+                tmp["tm"] = time.strftime('%Y.%m.%d %H:%M:%S',time.localtime(mtime))
+                cdbservice = "%scdb" % (service)
+
+                if mtime > 0:
+                        tmp["class"] = ""
+                else:
+                        #tmp["class"] = " fatal"
+                        tmp["class"] = " warn"
+                d[cdbservice] = [tmp]
+
+        t.write(d)
+except:
+        raise

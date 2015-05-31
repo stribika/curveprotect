@@ -1,0 +1,21 @@
+diff -Nur djbdns-1.05/dns_transmit.c djbdns-1.05.new/dns_transmit.c
+--- djbdns-1.05/dns_transmit.c	2013-05-30 15:35:58.994266991 +0200
++++ djbdns-1.05.new/dns_transmit.c	2013-05-30 15:30:45.130254096 +0200
+@@ -57,7 +57,7 @@
+   unsigned int len;
+   char nonce[24];
+ 
+-  d->paddinglen = 0;
++  d->paddinglen = (2 + dns_random(2)) * 64 - (len + 16) % 64;
+ 
+   len = dns_domain_length(d->name) + d->paddinglen;
+   d->querylen = len + 86;
+@@ -406,7 +406,7 @@
+ 
+   len = dns_domain_length(q);
+ 
+-  d->paddinglen = 0;
++  d->paddinglen = 3 * 64 - (len + 16) % 64;
+ 
+   if (!suffix) suffix = "";
+   suffixlen = dns_domain_length(suffix);

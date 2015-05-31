@@ -1,0 +1,36 @@
+diff -Nur nacl-20110221.orig/curvecp/socket_udp.c nacl-20110221/curvecp/socket_udp.c
+--- nacl-20110221.orig/curvecp/socket_udp.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221/curvecp/socket_udp.c	2011-04-22 10:35:47.690479425 +0200
+@@ -6,22 +6,32 @@
+ #include "socket.h"
+ #include "blocking.h"
+ 
++#ifndef SOL_IP
++#ifdef IPPROTO_IP
++#define SOL_IP IPPROTO_IP
++#endif
++#endif
++
+ static void enable_bsd_fragmentation(int fd)
+ {
+ #ifdef IP_DONTFRAG
++#ifdef SOL_IP
+   const int x = 0;
+   setsockopt(fd,SOL_IP,IP_DONTFRAG,&x,sizeof x);
+ #endif
++#endif
+ }
+ 
+ static void enable_linux_fragmentation(int fd)
+ {
+ #ifdef IP_MTU_DISCOVER
+ #ifdef IP_PMTUDISC_DONT
++#ifdef SOL_IP
+   const int x = IP_PMTUDISC_DONT;
+   setsockopt(fd,SOL_IP,IP_MTU_DISCOVER,&x,sizeof x);
+ #endif
+ #endif
++#endif
+ }
+ 
+ int socket_udp(void)

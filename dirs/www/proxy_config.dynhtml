@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+# 20110823
+# Jan Mojzis
+# Public domain.
+
+
+import cgi, lib, config
+
+try:
+        lib.limit_resources()
+        q = cgi.parse()
+
+        name = q['name'][0]
+        a = ["httpproxy","jabberproxy","smtpproxy","imapproxy","popproxy"]
+        b = ["httpproxy"]
+        if name not in a:
+                 raise ValueError("Sorry, only %s type allowed" % (a))
+
+        controlfn = "%s/%s/supervise/control" % (config.servicedir, name)
+
+        try:
+                keydir="/%s/%s/%s" % (lib.basedir,lib.curvecp_keydir, q['keydir'][0])
+        except:
+                keydir=""
+
+        try:
+                if name not in b:
+                        raise ValueError("Sorry, only %s type allowed" % (b))
+                allowunencrypted = q['allowunencrypted'][0]
+        except (KeyError, ValueError):
+                allowunencrypted = ""
+        try:
+                if name not in b:
+                        raise ValueError("Sorry, only %s type allowed" % (b))
+                ipv6 = q['ipv6'][0]
+        except (KeyError, ValueError):
+                ipv6 = "disabled"
+
+        fn = "etc/%s/env/KEYDIR" % (name)
+        if keydir:
+                lib.openwritecloserename(fn, keydir, "etc")
+        else:
+                lib.tryunlink(fn)
+
+        fn="etc/%s/env/ALLOWUNENCRYPTED" % (name)
+        if allowunencrypted:
+                lib.openwritecloserename(fn, "1", "etc")
+        else:
+                lib.tryunlink(fn)
+
+        fn="etc/%s/env/ALLOWIPV6" % (name)
+        if ipv6 == "enabled":
+                lib.openwritecloserename(fn, "1", "etc")
+        else:
+                lib.tryunlink(fn)
+
+
+        lib.openwriteclose(controlfn,"t")
+
+
+except:
+        lib.print_refresh_failed("proxy")
+else:
+        lib.print_refresh_success("proxy")

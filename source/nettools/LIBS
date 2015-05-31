@@ -1,0 +1,4 @@
+statusmessage.o
+crypto_block.o
+safenonce.o
+nameparse.o

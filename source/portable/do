@@ -1,0 +1,31 @@
+#!/bin/sh -e
+
+echo "=== `date` === starting portable"
+okabi | (
+  while read abi
+  do
+    (
+      echo 'direntry.h direntry.h-dirent'
+      echo 'direntry.h direntry.h-direct'
+      echo 'hasipv6.h hasipv6.h-yes'
+      echo 'hasipv6.h default.h-no'
+    ) | (
+      while read target source
+      do
+        libs=`"oklibs-$abi"`
+        okc-$abi | (
+          while read c
+          do
+            [ -f "include/$abi/$target" ] && continue
+            echo "=== `date` === $abi trying $source as $target under $c..." >&2
+            rm -f "$source" "$target.tmp" 
+            $c -o "$source" "$source.c" ${libs} || continue
+            ./$source > "$target.tmp" || continue
+            mkdir -p "include/$abi"
+            cp "$target.tmp" "include/$abi/$target"
+          done
+        )
+      done
+    )
+  done
+)

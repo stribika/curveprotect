@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+# 20121209
+# Jan Mojzis
+# Public domain.
+
+import lib, htmltemplate, sys, header
+
+try:
+        lib.limit_resources()
+
+        keydir = ".keys"
+
+        t = htmltemplate.Template("html/backup.html")
+        d = header.header("backup")
+
+        t.write(d)
+
+except:
+        raise

@@ -1,0 +1,85 @@
+#!/bin/sh -e
+
+#20120722
+#Jan Mojzis
+#Public domain.
+
+[ -f do-macosx ] || (echo "file do-macosx not found"; exit 111;)
+[ -f conf-home ] || (echo "file conf-home not found"; exit 111;)
+[ -f conf-version ] || (echo "file conf-version not found"; exit 111;)
+which mkbom 1>/dev/null 2>/dev/null || (echo "program mkbom not found"; exit 111;)
+
+curveprotectdir=`head -1 conf-home`
+version=`head -1 conf-version`
+
+build="`pwd`/build"
+rm -rf "${build}/curveprotect-${version}.pkg"
+rm -rf "${build}/curveprotect-${version}.package"
+
+./do install "${build}/curveprotect-${version}.package/root"
+
+#postinstall
+mkdir -p "${build}/curveprotect-${version}.package/Scripts"
+(
+  echo "#!/bin/sh"
+  echo ""
+  echo "#copy scripts to sbin"
+  echo "cp -p \"${curveprotectdir}/bin/_\"* ${curveprotectdir}/sbin"
+  echo ""
+  echo "${curveprotectdir}/sbin/_postinst"
+  echo "exit 0"
+) > "${build}/curveprotect-${version}.package/Scripts/postinstall"
+chmod 755 "${build}/curveprotect-${version}.package/Scripts/postinstall"
+
+#package
+(
+  cd "${build}/curveprotect-${version}.package"
+  #chown -R root root Scripts
+  #chgrp -R wheel root Scripts
+  mkbom root Bom.tmp1
+
+  lsbom Bom.tmp1 | awk '
+    BEGIN{
+      OFS="\t"
+    }
+    {
+      if ($4 == "") {
+        print $1,$2,"0/0"
+        next;
+      }
+
+      if ($5 == "") {
+        print $1,$2,"0/0",$4
+        next;
+      }
+
+      if ($6 == "") {
+        print $1,$2,"0/0",$4,$5
+        next;
+      }
+    }
+  ' > Bom.tmp2
+  mkbom -i Bom.tmp2 Bom
+  (cd root; find . |cpio -Rroot:wheel -omudz) > Payload
+  rm -rf root Bom.tmp1 Bom.tmp2
+)
+
+#PackageInfo
+(
+  cd "${build}/curveprotect-${version}.package"
+  numfiles=`lsbom Bom | wc -l`
+  numfiles=`expr ${numfiles} + 0`
+  numbytes=`gunzip < Payload | wc -c`
+  numbytes=`expr ${numbytes} / 1024 + 1`
+  echo "<pkg-info format-version=\"2\" identifier=\"com.mojzis.curveprotect\" version=\"${version}\" overwrite-permissions=\"false\" install-location=\"/\" auth=\"root\">"
+  echo "    <payload installKBytes=\"${numbytes}\" numberOfFiles=\"${numfiles}\"/>"
+  echo "    <scripts>"
+  #echo "        <preinstall file=\"./preinstall\"/>"
+  echo "        <postinstall file=\"./postinstall\"/>"
+  echo "    </scripts>"
+  echo "</pkg-info>"
+) > "${build}/curveprotect-${version}.package/PackageInfo"
+
+pkgutil --flatten "${build}/curveprotect-${version}.package" "${build}/curveprotect-${version}.pkg"
+rm -rf "${build}/curveprotect-${version}.package"
+

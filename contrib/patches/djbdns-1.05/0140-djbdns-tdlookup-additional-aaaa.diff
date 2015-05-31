@@ -1,0 +1,21 @@
+diff -Nur djbdns-1.05.orig/tdlookup.c djbdns-1.05/tdlookup.c
+--- djbdns-1.05.orig/tdlookup.c	2013-05-20 08:46:36.463085372 +0200
++++ djbdns-1.05/tdlookup.c	2013-05-20 08:32:20.935115236 +0200
+@@ -261,6 +261,17 @@
+ 	  }
+         }
+       }
++      if (want(d1,DNS_T_AAAA)) {
++        cdb_findstart(&c);
++        while (r = find(d1,0)) {
++          if (r == -1) return 0;
++          if (byte_equal(type,2,DNS_T_AAAA)) {
++            if (!response_rstart(d1,DNS_T_AAAA,ttl)) return 0;
++            if (!dobytes(16)) return 0;
++            response_rfinish(RESPONSE_ADDITIONAL);
++          }
++        }
++      }
+     }
+     uint16_unpack_big(x + 8,&u16);
+     bpos += u16;

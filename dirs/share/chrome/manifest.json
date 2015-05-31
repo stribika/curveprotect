@@ -1,0 +1,19 @@
+{
+  "name": "CURVEPROTECT",
+  "manifest_version": 2,
+  "version": "_VERSION_",
+  "description": "CURVEPROTECT extension.",
+  "homepage_url": "http://mojzis.com/software/curveprotect/",
+  "icons": {
+    "128": "icon-128.png"
+  },
+  "permissions": ["tabs", "webRequest", "webRequestBlocking","http://*/*", "proxy"],
+  "options_page": "options.html",
+  "background": {
+    "scripts": ["defaults.js", "background.js"]
+  },
+  "browser_action": {
+    "default_icon": "icon-black.png",
+    "popup": "options.html"
+  }
+}

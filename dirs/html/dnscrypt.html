@@ -1,0 +1,185 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<script type="text/javascript">
+function showhide(x, y) {
+        var e = document.getElementById(x);
+        var t = document.getElementById(y);
+        if(e.style.display == "block") {
+                e.style.display = "none";
+                t.innerHTML = "more options";
+        }
+        else {
+                e.style.display = "block";
+                t.innerHTML = "less options";
+        }
+}
+</script>
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_dns.css
+</style>
+
+
+<!-- DNSCRYPTCACHE -->
+%TEMPLATE_BLOCKBEGIN_dnscryptcache%
+
+<div class="header">DNSCrypt resolver</div>
+<div class="note">
+DNSCrypt resolver is backup DNS resolver running on %TEMPLATE_VARIABLE_ip% port 53 TCP and UDP.</br>
+Is dedicated as a last resort DNS resolver when the firewall is transparently redirecting the DNS traffic to a local resolver.</br>
+DNSCrypt resolver uses non-statndard port TCP 443 for sending DNSCrypt protected packets.</br>
+This will make most firewalls think it's HTTPS traffic and leave it alone.</br></br>
+For example can be configured using public OpenDNS servers:
+<li>DNSCrypt provider public-key: opendns (key is included)</li>
+<li>DNSCrypt provider name: 2.dnscrypt-cert.opendns.com</li>
+<li>DNSCrypt remote resolver IP: 208.67.220.220,208.67.222.222,2620:0:ccc::2,2620:0:ccd::2</li>
+</div>
+
+<div class="line label">
+  <div class="dns-name dns-bold">dnscrypt configuration</div>
+  <div class="dns-value"></div>
+  <div class="dns-submit"></div>
+  <div class="dns-submit2"></div>
+</div>
+<div class="lineend"></div>
+
+<form name="input" action="dnscrypt_dnscacheconfig.dynhtml" method="get">
+
+  <div class="line">
+    <div class="dns-name dns-bold">DNSCrypt provider public-key</div>
+    <div  class="dns-value">
+      <select class="dns-value" name="ed25519keydir">
+        <option value=" ">-</option>
+%TEMPLATE_BLOCKBEGIN_ed25519keys%
+        <option value="%TEMPLATE_VARIABLE_key%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_key%</option>
+%TEMPLATE_BLOCKEND_ed25519keys%
+      </select>
+    </div>
+    <div class="dns-submit">
+     <a id="dnscryptcache-morelink" href="javascript:showhide('dnscryptcache-more','dnscryptcache-morelink');">more options</a>
+    </div>
+    <div class="dns-submit2"><input type="submit" class="submit" name="submit" value="change" /></div>
+  </div>
+  <div class="lineend"></div>
+
+  <div class="line">
+    <div class="dns-name dns-bold">DNSCrypt provider name</div>
+    <div class="dns-value"><input type="text" name="zone" value="%TEMPLATE_VARIABLE_dnscryptzone%" /></div>
+    <div class="dns-submit"></div>
+    <div class="dns-submit2"></div>
+  </div>
+  <div class="lineend"></div>
+
+  <div class="line">
+    <div class="dns-name dns-bold">DNSCrypt remote resolver IP</div>
+    <div class="dns-value"><input type="text" name="ip" value="%TEMPLATE_VARIABLE_dnscryptip%" /></div>
+
+    <div class="dns-submit"></div>
+    <div class="dns-submit2"></div>
+  </div>
+  <div class="lineend"></div>
+
+  <div id="dnscryptcache-more" style="display: none;">
+
+    <div class="line">
+        <div class="dns-name bold">DNSCrypt local key</div>
+        <div  class="dns-value">
+          <select class="dns-value" name="keydir">
+            <option value="">random generated</option>
+%TEMPLATE_BLOCKBEGIN_keys%
+            <option value="%TEMPLATE_VARIABLE_key%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_key%</option>
+%TEMPLATE_BLOCKEND_keys%
+          </select>
+        </div>
+        <div class="dns-submit"></div>
+        <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+
+    <div class="line">
+      <div class="dns-name dns-bold">DNSCrypt response magic</div>
+      <div class="dns-value"><input type="text" name="magic" value="%TEMPLATE_VARIABLE_dnscryptmagic%" /></div>
+      <div class="dns-submit"></div>
+      <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+    <div class="line">
+      <div class="dns-name dns-bold">DNSCrypt resolver cachesize</div>
+      <div class="dns-value"><input type="text" name="cachesize" value="%TEMPLATE_VARIABLE_cachesize%" /></div>
+      <div class="dns-submit"></div>
+      <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+  </div>
+
+  <div class="line">
+    <div class="dns-name dns-bold">DNSCrypt resolver status</div>
+    <div  class="dns-value">%TEMPLATE_VARIABLE_status%</div>
+    <div class="dns-submit"><input type="submit" class="submit" name="submit" value="clean cache" /></div>
+    <div class="dns-submit2"><input type="submit" class="submit" name="submit" value="restart" /></div>
+  </div>
+  <div class="lineend"></div>
+
+</form>
+
+<div class="dns-separator"></div>
+
+<div id="dnscrypt-certificate" style="display: %TEMPLATE_VARIABLE_display%;">
+
+    <div class="line label">
+      <div class="dns-name dns-bold">DNSCrypt certificate</div>
+      <div class="dns-value"></div>
+      <div class="dns-submit"></div>
+      <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+    <div class="line">
+      <div class="dns-name dns-bold">DNSCrypt server public-key</div>
+      <div class="dns-value">%TEMPLATE_VARIABLE_pk%</div>
+      <div class="dns-submit"></div>
+      <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+    <div class="line">
+      <div class="dns-name dns-bold">DNSCrypt certificate serial</div>
+      <div class="dns-value">%TEMPLATE_VARIABLE_serial%</div>
+      <div class="dns-submit"></div>
+      <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+    <div class="line">
+      <div class="dns-name dns-bold">DNSCrypt certificate valid since</div>
+      <div class="dns-value">%TEMPLATE_VARIABLE_periodsince%</div>
+      <div class="dns-submit"></div>
+      <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+    <div class="line">
+      <div class="dns-name dns-bold">DNSCrypt certificate valid to</div>
+      <div class="dns-value">%TEMPLATE_VARIABLE_periodto%</div>
+      <div class="dns-submit"></div>
+      <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+    <div class="line">
+      <div class="dns-name dns-bold">DNSCrypt certificate last check</div>
+      <div class="dns-value%TEMPLATE_VARIABLE_lastdownloadclass%">%TEMPLATE_VARIABLE_lastdownload%</div>
+      <div class="dns-submit"></div>
+      <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+    <div class="line">
+      <div class="dns-name dns-bold">DNSCrypt query magic</div>
+      <div class="dns-value">%TEMPLATE_VARIABLE_dnscryptmagicq%</div>
+      <div class="dns-submit"></div>
+      <div class="dns-submit2"></div>
+    </div>
+    <div class="lineend"></div>
+</div>
+
+
+
+%TEMPLATE_BLOCKEND_dnscryptcache%
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html
+

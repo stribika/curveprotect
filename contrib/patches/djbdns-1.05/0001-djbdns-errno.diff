@@ -1,0 +1,12 @@
+diff -Nur djbdns-1.05.orig/error.h djbdns-1.05/error.h
+--- djbdns-1.05.orig/error.h	2001-02-11 22:11:45.000000000 +0100
++++ djbdns-1.05/error.h	2011-04-17 17:31:20.028697873 +0200
+@@ -1,7 +1,7 @@
+ #ifndef ERROR_H
+ #define ERROR_H
+ 
+-extern int errno;
++#include <errno.h>
+ 
+ extern int error_intr;
+ extern int error_nomem;

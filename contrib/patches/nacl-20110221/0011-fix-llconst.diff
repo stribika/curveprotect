@@ -1,0 +1,26 @@
+diff -Nur nacl-20110221.orig/curvecp/curvecpclient.c nacl-20110221/curvecp/curvecpclient.c
+--- nacl-20110221.orig/curvecp/curvecpclient.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221/curvecp/curvecpclient.c	2013-01-27 16:11:42.454029475 +0100
+@@ -25,14 +25,14 @@
+ 
+ #define NUMIP 8
+ long long hellowait[NUMIP] = {
+-   1000000000
+-,  1500000000
+-,  2250000000
+-,  3375000000
+-,  5062500000
+-,  7593750000
+-, 11390625000
+-, 17085937500
++   1000000000LL
++,  1500000000LL
++,  2250000000LL
++,  3375000000LL
++,  5062500000LL
++,  7593750000LL
++, 11390625000LL
++, 17085937500LL
+ } ;
+ 
+ #include "crypto_box.h"

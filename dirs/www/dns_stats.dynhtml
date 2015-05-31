@@ -1,0 +1,573 @@
+#!/usr/bin/env python
+
+import sys, os, time, header, footer, lib, htmltemplate
+
+#XXX
+logdir   = "log/dnscache/"
+
+
+def getLogs(d = ""):
+        """
+        """
+
+        ret = []
+
+        for f in os.listdir(d):
+                if f[-2:] in [".s",".u"]:
+                        ret.append(f)
+        ret.sort()
+        ret.append("current")
+        return ret
+
+
+
+def sort_by_value(d):
+        """
+        """
+        items=list(d.items())
+        backitems=[ [v[1],v[0]] for v in items]
+        backitems.sort()
+        r = [ backitems[i][1] for i in range(0,len(backitems))]
+        r.reverse()
+        return r
+
+
+records = {"1":"A", "2":"NS", "5":"CNAME", "6":"SOA","12":"PTR","15":"MX","16":"TXT","28":"AAAA","33":"SRV","255":"ANY"}
+def convert_record(num = ""):
+        """
+        """
+
+        if num in records:
+                return records[num]
+        else:
+                return num
+
+
+
+def fix_request(req = ""):
+        """
+        """
+
+        resp = req
+
+        try:
+                if req[-5:] == "arpa.":
+                        raise
+                r = req.split(".")
+                dummy = int(r[0])
+                dummy = int(r[1])
+                dummy = int(r[2])
+                dummy = int(r[3])
+                resp = ".".join(r[4:])
+        except:
+                pass
+
+        if resp[-1] == ".":
+                resp = resp[0:-1]
+
+        return resp
+
+
+def convert_hex2ip(hexip = ""):
+        """
+        """
+
+        hexip = hexip.split(":")[0]
+
+        i1 = int(hexip[0:2], 16)
+        i2 = int(hexip[2:4], 16)
+        i3 = int(hexip[4:6], 16)
+        i4 = int(hexip[6:8], 16)
+
+        return "%d.%d.%d.%d" % (i1,i2,i3,i4)
+
+
+class Stats:
+        """
+        """
+
+        def __init__(self):
+                """
+                """
+
+
+                #tx
+                self.tx_local    = 0
+                self.tx_normal   = 0
+                self.tx_dnscurve = 0
+
+                #query
+                self.q = {}
+                self.queries = 0
+                self.record = {}
+                self.record_count = 0
+
+                #nodata + nxdomain
+                self.nodata = 0
+                self.nxdomain = 0
+
+                #lame + servfail + drop
+                self.servfail = {}
+                self.lame = {}
+                self.drop = {}
+
+                #stats
+                self.stats_count    = 0 
+                self.stats_tcp      = 0
+                self.stats_udp      = 0
+                self.stats_hit      = 0
+                self.stats_miss     = 0
+                self.stats_tx4      = 0
+                self.stats_tx6      = 0
+                self.stats_motion   = 0
+                self.stats_motiontm = None
+
+                #cached
+                self.protected = {}
+                self.cached = 0
+
+                return
+
+        def add_tx(self, values = []):
+                """
+                normal request:
+                ['@400000004de48a8a01e26a0c', 'tx', '0', '1', 'debiancz.debian.cz.', 'debian.cz.', '-', 'd4147004', '93fb3003']
+                dnscurve protected request:
+                ['@400000004de4829038f3a894', 'tx', '0', '1', 'mojzis.com.', 'mojzis.com.', '+', '511f2e72', '6d4a3142']
+                root:
+                ['@400000004de4765329f4d264', 'tx', '0', '1', 'kontact.org.', '.', '-', '7f4e0618']
+                local:
+                ['@400000004de4765620b6ee6c', 'tx', '0', '1', 'kancelar.seznam.cz.', 'kancelar.seznam.cz.', '-', '7f4e0617']
+                """
+
+                if values[-1][1:5] in  ["127."]:
+                        self.tx_local += 1
+                        return
+
+                if values[6] == '+':
+                        self.tx_dnscurve += 1
+                        zone = values[5]
+                        if len(zone) > 1:
+                                if zone[-1] == '.':
+                                        zone = zone[0:-1]
+
+                        if zone in self.protected:
+                                self.protected[zone] += 1
+                        else:
+                                self.protected[zone] = 1
+                        return
+
+                if values[6] == '-':
+                        self.tx_normal += 1
+                        return
+
+
+        def add_query(self, values = []):
+                """
+                """
+
+                id      = values[2]
+                iphex   = values[3]
+                record  = values[4]
+                request = values[5]
+
+                self.queries += 1
+
+                #record count
+                if record in self.record:
+                        self.record[record] += 1
+                else:
+                        self.record[record] = 1
+                self.record_count += 1
+
+                #add queryid
+                if not id in self.q:
+                        self.q[id] = {}
+
+                self.q[id]["record"] = record
+                self.q[id]["request"] = request
+                self.q[id]["response"] = ""
+                return
+
+        def add_nodata(self, values = []):
+                """
+                """
+
+                self.nodata += 1
+                return
+
+        def add_nxdomain(self, values = []):
+                """
+                """
+
+                self.nxdomain += 1
+                return
+
+
+        def add_servfail(self, values = []):
+                """
+                """
+
+                req = fix_request(values[2])
+
+                if req in self.servfail:
+                        self.servfail[req] += 1
+                else:
+                        self.servfail[req] = 1
+                return
+
+        def add_lame(self, values = []):
+                """
+                """
+
+                req = fix_request(values[3])
+
+                if req in self.lame:
+                        self.lame[req] += 1
+                else:
+                        self.lame[req] = 1
+                return
+
+
+        def add_drop(self, values = []):
+                """
+                """
+
+                id = values[2]
+
+                if id in self.q:
+                        self.q[id]
+                else:
+                        self.q[id] = {}
+                self.q[id]["response"] = "drop"
+
+                try:
+                        req = fix_request(self.q[id]["request"])
+
+                        if req in self.drop:
+                                self.drop[req] += 1
+                        else:
+                                self.drop[req] = 1
+                except:
+                        pass
+
+        def add_stats(self, values = []):
+
+
+                self.stats_tcp = int(values[5])
+                self.stats_udp = int(values[4])
+                try:
+                        self.stats_motion = long(values[3])
+                except NameError:
+                        self.stats_motion = int(values[3])
+                self.stats_motiontm = values[0]
+
+                try:
+                        self.stats_hit = int(values[6])
+                except:
+                        pass
+                try:
+                        self.stats_miss = int(values[7])
+                except:
+                        pass
+                try:
+                        self.stats_tx4 = int(values[8])
+                except:
+                        pass
+                try:
+                        self.stats_tx6 = int(values[9])
+                except:
+                        pass
+
+
+
+        def add_rr(self, values = []):
+                """
+                """
+	
+
+                if values[4] != "ns":
+                        return
+
+                zone = fix_request(values[5])
+
+                flaguz5 = 0
+                for x in values[6].split("."):
+                        if len(x) == 54:
+                                if x[0:3] == "uz5":
+                                        flaguz5 = 1
+                                        break
+                if flaguz5 == 0:
+                        return 
+
+                if zone in self.protected:
+                        self.protected[zone] += 1
+                else:
+                        self.protected[zone] = 1
+                return
+
+
+        def add_cached(self, values = []):
+                """
+                """
+
+                self.cached += 1
+
+                if values[2] != "ns":
+                        return
+
+                zone = fix_request(values[3])
+
+                flaguz5 = 0
+                for x in values[4].split("."):
+                        if len(x) == 54:
+                                if x[0:3] == "uz5":
+                                        flaguz5 = 1
+                                        break
+
+                if flaguz5 == 0:
+                        return 
+
+                if zone in self.protected:
+                        self.protected[zone] += 1
+                else:
+                        self.protected[zone] = 1
+                return
+
+
+        def add_tm(self, dnsstart = "", start = "", end = ""):
+                """
+                """
+
+                self.dnsstart = dnsstart
+                self.start = start
+                self.end   = end
+                return
+
+
+        def write_stats(self):
+                """
+                """
+
+                t1 = lib.taiconv(self.dnsstart)
+                if self.stats_motiontm:
+                        t2 = lib.taiconv(self.stats_motiontm)
+                else:
+                        t2 = time.time()
+                t = t2-t1
+
+                #transport
+                tx46 = float(self.stats_tx4 + self.stats_tx6)
+                try:
+                        tx4 = 100 * float(self.stats_tx4)/tx46
+                except:
+                        tx4 = 0.0
+                try:
+                        tx6 = 100 * float(self.stats_tx6)/tx46
+                except:
+                        tx6 = 0.0
+
+                #hit ratio
+                hitratio = 0
+                if (self.stats_hit + self.stats_miss) > 0:
+                        hitratio = 100*float(self.stats_hit)/float(self.stats_hit + self.stats_miss)
+
+                daycachemotion = float(self.stats_motion)/1048576
+                daycachemotion = daycachemotion * 86400
+                daycachemotion = daycachemotion / t
+
+                t1 = lib.taiconv(self.start)
+                t2 = lib.taiconv(self.end)
+                t = t2-t1
+                if (t < 1):
+                        t = 1
+
+                #transmited
+                xqueries  = float(self.tx_normal + self.tx_local + self.tx_dnscurve)
+                #XXX
+                if xqueries < 1.0:
+                        xqueries = 1.0
+                pnormal   = 100*(float(self.tx_normal)/float(xqueries))
+                plocal    = 100*(float(self.tx_local)/float(xqueries))
+                pdnscurve = 100*(float(self.tx_dnscurve)/float(xqueries))
+
+                d = header.header("dns_stats")
+                d["dnsfrom"]  = lib.taifmt(self.dnsstart)
+                d["from"]     = lib.taifmt(self.start)
+                d["to"]       = lib.taifmt(self.end)
+                d["seconds"]  = str(t)
+                d["queriess"] = "%.3f" % (float(self.queries)/float(t))
+                d["xqueries"] = "%.3f" % (float(xqueries)/float(t))
+                d["hitratio"] = "%.3f" % (hitratio)
+
+                d["total"] = str((self.tx_normal + self.tx_local + self.tx_dnscurve))
+                d["totalvalue"] = "100"
+                d["local"] = str(self.tx_local)
+                d["localvalue"] = "%0.2f" % (plocal)
+                d["dnscurve"] = str(self.tx_dnscurve)
+                d["dnscurvevalue"] = "%0.2f" % (pdnscurve)
+                d["regular"] = str(self.tx_normal)
+                d["regularvalue"] = "%0.2f" % (pnormal)
+                d["querytypes"] = []
+
+                i = 10
+                record_list = sort_by_value(self.record)
+                for record in record_list:
+                        tmp = {}
+                        tmp["key"] = convert_record(record)
+                        tmp["value"] = "%0.2f" % (float(float(100*self.record[record])/float(self.record_count)))
+                        d["querytypes"].append(tmp)
+                        i-=1
+                        if i == 0:
+                                break
+
+                d["cachemotion"] = []
+
+                for i in [1,3,7]:
+                        tmp = {}
+                        tmp["key"]   = "%d-day" % (i)
+                        tmp["value"] = "%0.2f" % (i*daycachemotion)
+                        d["cachemotion"].append(tmp)
+
+                d["tables"] = []
+
+                for t in ["protected", "drop", "servfail", "lame"]:
+                        tmp = {}
+                        if t == "lame":
+                                xx = self.lame
+                                ii = 10
+                                tmp["text"] = "RESPONSES FROM LAME SERVERS"
+                                c = " warn"
+
+                        if t == "drop":
+                                xx = self.drop
+                                tmp["text"] = "DROPPED REQUESTS"
+                                ii = 10
+                                c = " warn"
+
+                        if t == "servfail":
+                                xx = self.servfail
+                                tmp["text"] = "FAILED REQUESTS (SERVFAIL)"
+                                ii = 10
+                                c = " warn"
+
+                        if t == "protected":
+                                xx = self.protected
+                                tmp["text"] = "DNSCURVE PROTECTED ZONES"
+                                ii = 20
+                                c = ""
+
+                        tmp["xxxx"] = self.add_x(xx, ii, c)
+                        if len(tmp["xxxx"]):
+                                d["tables"].append(tmp)
+
+                d["transport"] = []
+                tmp = {}
+                tmp["key"] = "IPv4"
+                tmp["value"] = "%.2f" % (tx4)
+                d["transport"].append(tmp)
+                tmp = {}
+                tmp["key"] = "IPv6"
+                tmp["value"] = "%.2f" % (tx6)
+                d["transport"].append(tmp)
+
+                return d
+
+
+
+
+        def add_x(self, x, i, c):
+
+                ret = []
+
+                if len(x) == 0:
+                        return []
+
+                record_list = sort_by_value(x)
+                for record in record_list:
+                        tmp = {}
+                        tmp["key"] = record
+                        tmp["value"] = str(x[record])
+                        tmp["class"] = c
+                        ret.append(tmp)
+                        i-=1
+                        if i == 0:
+                                break
+                return ret
+
+
+lib.limit_resources()
+
+dnsstart = None
+stats = Stats()
+
+start = None
+end   = None
+
+for fn in getLogs(logdir):
+
+        f = open("%s/%s" % (logdir, fn), "r")
+
+        while True:
+                line = f.readline()
+                if not len(line):
+                        break
+
+                try:
+
+                        values = line.split()
+                        if len(values) < 2:
+                                continue
+
+                        if start == None:
+                                start = values[0]
+                        if dnsstart == None:
+                                dnsstart = values[0]
+
+                        t = values[1]
+
+                        if t == "starting":
+                                start = values[0]
+                                dnsstart = values[0]
+                                stats = Stats()
+
+                        if t == "tx":
+                                stats.add_tx(values)
+
+                        if t == "query":
+                                stats.add_query(values)
+
+                        if t == "nodata":
+                                stats.add_nodata(values)
+
+                        if t == "nxdomain":
+                                stats.add_nxdomain(values)
+
+                        if t == "lame":
+                                stats.add_lame(values)
+
+                        if t == "servfail":
+                                stats.add_servfail(values)
+
+                        if t == "drop":
+                                stats.add_drop(values)
+
+                        if t == "stats":
+                                stats.add_stats(values)
+
+                        if t == "cached":
+                                stats.add_cached(values)
+
+                        if t == "rr":
+                                stats.add_rr(values)
+                finally:
+                        #print(line[:-1])
+                        pass
+        f.close()
+end = values[0]
+stats.add_tm(dnsstart,start,end)
+
+t = htmltemplate.Template("html/dns_stats.html")
+d = stats.write_stats()
+t.write(d)
+

@@ -1,0 +1,118 @@
+diff -Nur djbdns-1.05.orig/dnscache.c djbdns-1.05/dnscache.c
+--- djbdns-1.05.orig/dnscache.c	2013-01-20 19:38:55.201958405 +0100
++++ djbdns-1.05/dnscache.c	2013-01-20 19:40:09.897957083 +0100
+@@ -452,6 +452,7 @@
+   }
+   query_init(pk,sk);
+   dns_nonce_init(env_get("NONCESTART"), nk);
++  dns_magic_init(env_get("QUERYMAGIC"),env_get("RESPONSEMAGIC"));
+ 
+   socket_tryreservein(udp53,131072);
+ 
+diff -Nur djbdns-1.05.orig/dns.h djbdns-1.05/dns.h
+--- djbdns-1.05.orig/dns.h	2013-01-20 19:38:55.181958405 +0100
++++ djbdns-1.05/dns.h	2013-01-20 19:39:20.333957962 +0100
+@@ -94,5 +94,9 @@
+ 
+ extern void dns_randomkey(unsigned char *, unsigned char *, unsigned char *);
+ 
++extern unsigned char *dns_magicq;
++extern unsigned char *dns_magicr;
++extern void dns_magic_init(const char *, const char *);
++
+ 
+ #endif
+diff -Nur djbdns-1.05.orig/dns_key.c djbdns-1.05/dns_key.c
+--- djbdns-1.05.orig/dns_key.c	2013-01-20 19:38:55.181958405 +0100
++++ djbdns-1.05/dns_key.c	2013-01-20 19:39:20.333957962 +0100
+@@ -15,3 +15,4 @@
+     crypto_box_keypair(pk, sk);
+     randombytes(nk, 16);
+ }
++
+diff -Nur djbdns-1.05.orig/dns_magic.c djbdns-1.05/dns_magic.c
+--- djbdns-1.05.orig/dns_magic.c	1970-01-01 01:00:00.000000000 +0100
++++ djbdns-1.05/dns_magic.c	2013-01-20 19:41:32.209955615 +0100
+@@ -0,0 +1,11 @@
++#include "dns.h"
++#include "str.h"
++
++unsigned char *dns_magicq = (unsigned char *)"Q6fnvWj8";
++unsigned char *dns_magicr = (unsigned char *)"R6fnvWJ8";
++
++void dns_magic_init(const char *m1, const char *m2) {
++
++    if (m1 && str_len(m1) == 8) dns_magicq = (unsigned char *)m1;
++    if (m2 && str_len(m2) == 8) dns_magicr = (unsigned char *)m2;
++}
+diff -Nur djbdns-1.05.orig/dns_transmit.c djbdns-1.05/dns_transmit.c
+--- djbdns-1.05.orig/dns_transmit.c	2013-01-20 19:38:55.185958405 +0100
++++ djbdns-1.05/dns_transmit.c	2013-01-20 19:39:20.333957962 +0100
+@@ -62,7 +62,7 @@
+   if (!d->suffix) {
+     byte_copyr(d->query + 54,len + 32,d->query + 16);
+     uint16_pack_big(d->query,len + 84);
+-    byte_copy(d->query + 2,8,"Q6fnvWj8");
++    byte_copy(d->query + 2,8,dns_magicq);
+     byte_copy(d->query + 10,crypto_box_PUBLICKEYBYTES,d->pubkey);
+     byte_copy(d->query + 42,12,nonce);
+     return;
+@@ -105,7 +105,7 @@
+ 
+   if (!d->suffix) {
+     if (len < 48) return 1;
+-    if (byte_diff(buf,8,"R6fnvWJ8")) return 1;
++    if (byte_diff(buf,8,dns_magicr)) return 1;
+     if (byte_diff(buf + 8,12,d->nonce)) return 1;
+     byte_copy(nonce,24,buf + 8);
+     byte_zero(buf + 16,16);
+diff -Nur djbdns-1.05.orig/FILES djbdns-1.05/FILES
+--- djbdns-1.05.orig/FILES	2013-01-20 19:38:55.185958405 +0100
++++ djbdns-1.05/FILES	2013-01-20 19:41:14.141955936 +0100
+@@ -94,6 +94,7 @@
+ dns_txt.c
+ dns_nonce.c
+ dns_key.c
++dns_magic.c
+ choose.sh
+ warn-auto.sh
+ find-systype.sh
+diff -Nur djbdns-1.05.orig/Makefile djbdns-1.05/Makefile
+--- djbdns-1.05.orig/Makefile	2013-01-20 19:38:55.185958405 +0100
++++ djbdns-1.05/Makefile	2013-01-20 19:39:20.333957962 +0100
+@@ -237,11 +237,11 @@
+ dns.a: \
+ makelib dns_dfd.o dns_domain.o dns_dtda.o dns_ip.o dns_ipq.o dns_mx.o \
+ dns_name.o dns_nd.o dns_packet.o dns_random.o dns_rcip.o dns_rcrw.o \
+-dns_resolve.o dns_sortip.o dns_transmit.o dns_txt.o dns_nonce.o dns_key.o
++dns_resolve.o dns_sortip.o dns_transmit.o dns_txt.o dns_nonce.o dns_key.o dns_magic.o
+ 	./makelib dns.a dns_dfd.o dns_domain.o dns_dtda.o dns_ip.o \
+ 	dns_ipq.o dns_mx.o dns_name.o dns_nd.o dns_packet.o \
+ 	dns_random.o dns_rcip.o dns_rcrw.o dns_resolve.o \
+-	dns_sortip.o dns_transmit.o dns_txt.o dns_nonce.o dns_key.o
++	dns_sortip.o dns_transmit.o dns_txt.o dns_nonce.o dns_key.o dns_magic.o
+ 
+ dns_dfd.o: \
+ compile dns_dfd.c error.h alloc.h byte.h dns.h stralloc.h gen_alloc.h \
+@@ -273,6 +273,10 @@
+ taia.h tai.h uint64.h
+ 	./compile dns_key.c
+ 
++dns_magic.o: \
++compile dns_magic.c dns.h str.h
++	./compile dns_magic.c
++
+ dns_mx.o: \
+ compile dns_mx.c stralloc.h gen_alloc.h byte.h uint16.h dns.h \
+ stralloc.h iopause.h taia.h tai.h uint64.h taia.h
+diff -Nur djbdns-1.05.orig/TARGETS djbdns-1.05/TARGETS
+--- djbdns-1.05.orig/TARGETS	2013-01-20 19:38:55.189958405 +0100
++++ djbdns-1.05/TARGETS	2013-01-20 19:39:20.337957963 +0100
+@@ -114,6 +114,7 @@
+ dns_txt.o
+ dns_nonce.o
+ dns_key.o
++dns_magic.o
+ dns.a
+ env.o
+ env.a

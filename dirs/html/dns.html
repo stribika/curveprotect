@@ -1,0 +1,339 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<script type="text/javascript">
+function disableInterval(x){
+        f = x.form;
+        v = x.value;
+        f.elements["interval"].disabled="";
+        f.elements["ed25519keydir"].disabled="disabled";
+        f.elements["ed25519keydir"].value="";
+        if (v == "DNSAnchor"){
+                f.elements["interval"].disabled="disabled";
+        }
+        if (v == "DNSCurveAnchor"){
+                f.elements["interval"].disabled="disabled";
+        }
+        if (v == "HTTPDownload"){
+                f.elements["ed25519keydir"].disabled="";
+        }
+}
+function confirmSubmit(){
+    var agree=confirm("Zone will be permanently removed. Should I really do it?");
+    if (agree)
+        return true ;
+    else
+        return false ;
+}
+function confirmSelection(x){
+    if (x.form.elements["dnscurve"].value != "streamlined"){
+        return true;
+    }
+    var agree=confirm("Setup Streamlined DNSCurve only when Your firewall and provider supports it. Should I really do it?");
+    if (agree)
+        return true ;
+    else
+        return false ;
+}
+
+function confirmUnprotected(x){
+    if (x.form.elements["service"].value == "HTTPDownload"){
+        return true;
+    }
+    if (x.form.elements["service"].value == "DNSCurveAnchor"){
+        return true;
+    }
+    if (x.form.elements["service"].value == "AXFRDownload"){
+        return confirm("Warning!!! AXFR download is not encrypted and authenticated, it is security risk! Should I really do it?");
+    }
+    if (x.form.elements["service"].value == "DNSAnchor"){
+        return confirm("Warning!!! DNS packets will not be encrypted and authenticated with DNSCurve protocol, it is security risk! Should I really do it?");
+    }
+}
+function showConfig(x) {
+  alert (x.value.replace(/,/g,'\n'))
+  return false
+}
+function showHelp(x) {
+  if (x.value == "need help") {
+    alert ("Configuration:\n\nHTTPDownload:\nHTTP url directing to Ed25519 signed data file in tinydns format\n\nAXFRDownload:\nsingle IPv4 address or single hostname directing to DNS server with AXFR enabled\n\nDNSAnchor:\ncomma-separated series of IPv4 addresses directing to DNS servers\n\nDNSCurveAnchor:\ncomma-separated series of colon-separated IPv4 addresses and DNSCurve hex-public-keys\ndirecting to DNS servers with DNSCurve suppport\n")
+  }
+  if (x.value == "example") {
+    alert ("Examples:\n\ntestzone1 HTTPDownload:\nhttp://mojzis.com/software/curveprotect/example/testzone1\n\ntestzone2 AXFRDownload:\naxfr.curveprotect.org\n\ntestzone3 DNSAnchor:\n46.243.49.31,46.243.53.31\n\ntestzone4 DNSCurveAnchor:\n46.243.49.31:11ec400aad1542a6d89689b7f382f69b80f790e392d16fdc7942cd6df9319003,46.243.53.31:a5d4c1f8a09db3809161051bd574bd7f7aed2be887b4c982fda399dc230ea620\n")
+  }
+  return false;
+}
+
+function showhide(x, y) {
+        var e = document.getElementById(x);
+        var t = document.getElementById(y);
+        if(e.style.display == "block") {
+                e.style.display = "none";
+                t.innerHTML = "more options";
+        }
+        else {
+                e.style.display = "block";
+                t.innerHTML = "less options";
+        }
+}
+</script>
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_dns.css
+</style>
+
+
+
+
+<!-- DNSCACHE -->
+%TEMPLATE_BLOCKBEGIN_dnscache%
+
+<div class="header">DNS resolver</div>
+<div class="note">
+DNS resolver is main DNS resolver running on %TEMPLATE_VARIABLE_ip% port 53 TCP and UDP.
+</div>
+
+<div class="line label">
+  <div class="dns-name dns-bold">dnscache configuration</div>
+  <div class="dns-value"></div>
+  <div class="dns-submit"></div>
+  <div class="dns-submit"></div>
+  <div class="dns-submit2"></div>
+</div>
+<div class="lineend"></div>
+
+<div id="dnscache-more" style="display: none;">
+
+<div class="line">
+  <form name="input" action="dns_dnscacheconfig.dynhtml" method="get">
+    <div class="dns-name dns-bold">DNSCurve type</div>
+    <div class="dns-value">
+      <select name="dnscurve">
+        <option value="mixed" %TEMPLATE_VARIABLE_mch% >Autodetected DNSCurve</option>
+        <option value="streamlined" %TEMPLATE_VARIABLE_sch% >Streamlined-only DNSCurve</option>
+        <option value="txt"         %TEMPLATE_VARIABLE_tch% >TXT-only DNSCurve</option>
+      </select>
+    </div>
+    <div class="dns-submit"></div>
+    <div class="dns-submit"></div>
+    <div class="dns-submit2"><input type="submit" class="submit" name="submit" onClick="return confirmSelection(this)" value="change" /></div>
+  </form>
+</div>
+<div class="lineend"></div>
+
+
+<div class="line">
+  <form name="input" action="dns_dnscacheconfig.dynhtml" method="get">
+    <div class="dns-name bold">DNSCurve key</div>
+    <div  class="dns-value">
+      <select class="dns-value" name="keydir">
+        <option value="">random generated</option>
+%TEMPLATE_BLOCKBEGIN_keys%
+        <option value="%TEMPLATE_VARIABLE_key%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_key%</option>
+%TEMPLATE_BLOCKEND_keys%
+      </select>
+    </div>
+    <div class="dns-submit"></div>
+    <div class="dns-submit"></div>
+    <div class="dns-submit2"><input type="submit" class="submit" name="submit" value="change" /></div>
+  </form>
+</div>
+<div class="lineend"></div>
+
+
+<div class="line">
+  <form name="input" action="dns_dnscacheconfig.dynhtml" method="get">
+    <div class="dns-name dns-bold">DNS cachesize</div>
+    <div class="dns-value"><input type="text" name="cachesize" value="%TEMPLATE_VARIABLE_cachesize%" /></div>
+    <div class="dns-submit"></div>
+    <div class="dns-submit"></div>
+    <div class="dns-submit2"><input type="submit" class="submit" name="submit" value="change" /></div>
+  </form>
+</div>
+<div class="lineend"></div>
+</div>
+
+
+
+<div class="line">
+  <form name="input" action="dns_dnscacheconfig.dynhtml" method="get">
+    <div class="dns-name dns-bold">DNSCurve resolver status</div>
+    <div  class="dns-value">%TEMPLATE_VARIABLE_status%</div>
+    <div class="dns-submit">
+      <a id="dnscache-morelink" href="javascript:showhide('dnscache-more','dnscache-morelink');">more options</a>
+    </div>
+    <div class="dns-submit"><input type="submit" class="submit" name="submit" value="clean cache" /></div>
+    <div class="dns-submit2"><input type="submit" class="submit" name="submit" value="restart" /></div>
+  </form>
+</div>
+<div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dnscache%
+
+<div class="dns-separator"></div>
+
+<!-- DNSLOCAL -->
+<div class="line label">
+  <div class="dns-zone">dns zone</div>
+  <div class="dns-interval">interval</div>
+  <div class="dns-type">type</div>
+  <div class="dns-conf">configuration</div>
+  <!--
+  <div class="dns-keydir">authorization key</div>
+  -->
+  <div class="dns-keydir">verification key</div>
+  <div class="dns-submit2"></div>
+  <div class="dns-last"></div>
+  <div class="dns-down"></div>
+  <div class="dns-down2"></div>
+</div><div class="lineend"></div>
+
+<form name="dns-add" action="/dns_dnslocalconfig.dynhtml" method="get">
+  <div class="line">
+    <div class="dns-zone">    <input type="text" name="zone"     value=""  /></div>
+    <div class="dns-interval"><input type="text" name="interval" value="86400"  disabled="disabled" /></div>
+    <div class="dns-type">
+      <select name="service" class="type" onChange="disableInterval(this)">
+%TEMPLATE_BLOCKBEGIN_services%
+        <option value="%TEMPLATE_VARIABLE_service%" %TEMPLATE_VARIABLE_sl% >%TEMPLATE_VARIABLE_service%</option>
+%TEMPLATE_BLOCKEND_services%
+      </select>
+    </div>
+    <div class="dns-conf">    <input type="text" name="conf"     value=""  /></div>
+  <!--
+    <div class="dns-keydir">
+      <select class="dns-keydir" name="curvecpkeydir">
+        <option value="">random generated</option>
+%TEMPLATE_BLOCKBEGIN_curvecpkeys%
+        <option value="%TEMPLATE_VARIABLE_key%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_key%</option>
+%TEMPLATE_BLOCKEND_curvecpkeys%
+      </select>
+    </div>
+    -->
+    <div class="dns-keydir">
+      <select class="dns-keydir" name="ed25519keydir" disabled="disabled">
+        <option value=""></option>
+%TEMPLATE_BLOCKBEGIN_ed25519keys%
+        <option value="%TEMPLATE_VARIABLE_key%" %TEMPLATE_VARIABLE_sl%>%TEMPLATE_VARIABLE_key%</option>
+%TEMPLATE_BLOCKEND_ed25519keys%
+      </select>
+    </div>
+    <div class="dns-submit2"><input type="submit" class="submit" name="submit" value="add" onClick="return confirmUnprotected(this)" /></div>
+    <div class="dns-last"></div>
+<!--
+    <div class="dns-down"><input type="submit" class="submit" name="submit" onClick="return showHelp(this)" value="example" /></div>
+    <div class="dns-down2"><input type="submit" class="submit" name="submit" onClick="return showHelp(this)" value="need help" /></div>
+-->
+    <div class="dns-down"></div>
+    <div class="dns-down2"></div>
+  </div>
+  <div class="lineend"></div>
+</form>
+
+<div class="dns-separator"></div>
+
+<div class="line label">
+  <div class="dns-zone"></div>
+  <div class="dns-interval"></div>
+  <div class="dns-type"></div>
+  <div class="dns-conf"></div>
+  <!--
+  <div class="dns-keydir"></div>
+  -->
+  <div class="dns-keydir"></div>
+  <div class="dns-submit2"></div>
+  <div class="dns-last"></div>
+  <div class="dns-down"></div>
+  <div class="dns-down2"></div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_dnsroot%
+<form name="xxx" action="/dns_dnsrootconfig.dynhtml" method="get">
+  <div class="line">
+    <div class="dns-zone">    <input type="text" class="dns-zone" name="zone"     value="%TEMPLATE_VARIABLE_zone%" readonly /></div>
+    <div class="dns-interval"><input type="text" name="interval" value="%TEMPLATE_VARIABLE_interval%" readonly /></div>
+    <div class="dns-type"></div>
+    <div class="dns-conf"></div>
+  <!--
+    <div class="dns-keydir"></div>
+  -->
+    <div class="dns-keydir"></div>
+    <div class="dns-submit2"></div>
+    <div class="dns-last"> <input class="dns-last%TEMPLATE_VARIABLE_class%" type="text" name="mtime"    value="%TEMPLATE_VARIABLE_tm%" readonly /></div>
+    <div class="dns-down"></div>
+    <div class="dns-down2">
+</form> <!-- XXX -->
+      <form name="input" action="data.dynhtml" method="get">
+        <input type="hidden" name="name" value="%TEMPLATE_VARIABLE_zone%"/>
+        <input type="hidden" name="type" value="dnsroot"/>
+        <input class="submit" type="submit" name="submit" value="show data"/>
+      </form>
+    </div>
+  </div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dnsroot%
+
+%TEMPLATE_BLOCKBEGIN_dnslocal%
+<form name="xxx" action="/dns_dnslocalconfig.dynhtml" method="get">
+  <div class="line">
+    <div class="dns-zone">    <input type="text" class="dns-zone" name="zone"     value="%TEMPLATE_VARIABLE_zone%" readonly /></div>
+    <div class="dns-interval"><input type="text" name="interval" value="%TEMPLATE_VARIABLE_interval%" readonly /></div>
+    <div class="dns-type"><input type="text" name="service" value="%TEMPLATE_VARIABLE_service%" readonly /></div>
+    <div class="dns-conf%TEMPLATE_VARIABLE_keydirclass%">    <input type="text" name="conf"  value="%TEMPLATE_VARIABLE_conf%" onClick="return showConfig(this)" readonly /></div>
+    <div class="dns-keydir%TEMPLATE_VARIABLE_keydirclass%">
+%TEMPLATE_BLOCKBEGIN_ed25519keys%
+      <select class="dns-keydir" name="ed25519keydir" disabled>
+        <option value="%TEMPLATE_VARIABLE_key%" selected="selected" >%TEMPLATE_VARIABLE_key%</option>
+      </select>
+%TEMPLATE_BLOCKEND_ed25519keys%
+     </div>
+    <div class="dns-submit2"><input type="submit" class="submit" name="submit" onClick="return confirmSubmit()" value="remove" /></div>
+    <div class="dns-last">   <input type="text" class="dns-last%TEMPLATE_VARIABLE_class%" name="mtime"    value="%TEMPLATE_VARIABLE_tm%" readonly /></div>
+    <div class="dns-down">
+%TEMPLATE_BLOCKBEGIN_dnslocaldownload%
+      <input type="submit" class="submit" name="submit" value="download now" />
+%TEMPLATE_BLOCKEND_dnslocaldownload%
+    </div>
+    <div class="dns-down2">
+</form> <!-- XXX -->
+%TEMPLATE_BLOCKBEGIN_dnslocaldownload%
+      <form name="input" action="data.dynhtml" method="get">
+        <input type="hidden" name="name" value="%TEMPLATE_VARIABLE_name%"/>
+        <input type="hidden" name="type" value="dnslocal"/>
+        <input class="submit" type="submit" name="submit" value="show data"/>
+      </form>
+%TEMPLATE_BLOCKEND_dnslocaldownload%
+    </div>
+  </div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dnslocal%
+
+
+
+%TEMPLATE_BLOCKBEGIN_dnslocalcdb%
+<form name="xxx" action="/dns_dnslocalconfig.dynhtml" method="get">
+  <div class="line">
+    <div class="dns-zone"></div>
+    <div class="dns-interval"></div>
+    <div class="dns-type"></div>
+    <div class="dns-conf"></div>
+  <!--
+    <div class="dns-keydir"></div>
+  -->
+    <div class="dns-keydir"></div>
+    <div class="dns-submit2"></div>
+    <div class="dns-last"><input class="dns-last%TEMPLATE_VARIABLE_class%"  type="text"   name="mtime"    value="%TEMPLATE_VARIABLE_tm%" readonly /></div>
+    <div class="dns-down">
+      <input type="submit" class="submit" name="submit" value="download all" />
+    </div>
+    <div class="dns-down2">
+</form> <!-- XXX -->
+      <form name="input" action="log.dynhtml" method="get">
+        <input type="hidden" name="name" value="dnslocaldownload"/>
+        <input class="submit" type="submit" name="submit" value="show log"/>
+      </form>
+    </div>
+  </div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dnslocalcdb%
+
+<div class="dns-separator"></div>
+
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html
+

@@ -1,0 +1,65 @@
+<html>
+<head>
+  <style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_colors.css
+%TEMPLATE_INCLUDE_FILE html/_global.css
+  </style>
+  <title>Curveprotect %TEMPLATE_VARIABLE_name%</title>
+%TEMPLATE_BLOCKBEGIN_flagfailed%
+  <!-- <meta http-equiv="refresh" content="5; url=/%TEMPLATE_VARIABLE_name%.dynhtml"> -->
+%TEMPLATE_BLOCKEND_flagfailed%
+%TEMPLATE_BLOCKBEGIN_redirect%
+  <meta http-equiv="refresh" content="%TEMPLATE_VARIABLE_seconds%; url=/%TEMPLATE_VARIABLE_page%">
+%TEMPLATE_BLOCKEND_redirect%
+</head>
+<body>
+
+
+<div id="header">
+  <div id="header-left">
+  <div id="header-version">version %TEMPLATE_VARIABLE_version%</div>
+  </div>
+  <div id="header-right"><img src="/static/curveprotect-logo.png" /></div>
+</div>
+<div id="separator">
+  <div id="separator-right">
+  </div>
+  <div id="separator-left">
+  </div>
+</div>
+<div id="body">
+  <div id="header-leftdown">
+    <div class="menu label">INTRO</div>
+    <div class="menu%TEMPLATE_VARIABLE_indexclass%"><a href="/index.dynhtml">index</a></div>
+    <div class="menu label">CONFIGURATION</div>
+    <div class="menu%TEMPLATE_VARIABLE_dnsclass%"><a href="/dns.dynhtml">DNS resolver</a></div>
+    <div class="menu%TEMPLATE_VARIABLE_dnscryptclass%"><a href="/dnscrypt.dynhtml">DNSCrypt resolver</a></div>
+    <div class="menu%TEMPLATE_VARIABLE_forwarderclass%"><a href="/forwarder.dynhtml">CurveCP Forwarders</a></div>
+    <div class="menu%TEMPLATE_VARIABLE_proxyclass%"><a href="/proxy.dynhtml">CurveCP Proxies</a></div>
+    <div class="menu%TEMPLATE_VARIABLE_vpnclass%"><a href="/vpn.dynhtml">CurveCP VPN</a></div>
+    <div class="menu label">key management</div>
+    <div class="menu%TEMPLATE_VARIABLE_dnscurvekeysclass%"><a href="/dnscurvekeys.dynhtml">DNSCurve keys</a></div>
+    <div class="menu%TEMPLATE_VARIABLE_curvecpkeysclass%"><a href="/curvecpkeys.dynhtml">CurveCP keys</a></div>
+    <div class="menu%TEMPLATE_VARIABLE_ed25519keysclass%"><a href="/ed25519keys.dynhtml">Ed25519 keys</a></div>
+    <div class="menu%TEMPLATE_VARIABLE_gpgkeysclass%"><a href="/gpgkeys.dynhtml">Gpg keys</a></div>
+    <div class="menu label">STATS</div>
+    <div class="menu%TEMPLATE_VARIABLE_dns_statsclass%"><a href="/dns_stats.dynhtml">DNS statistics</a></div>
+    <div class="menu%TEMPLATE_VARIABLE_httpproxy_statsclass%"><a href="/httpproxy_stats.dynhtml">HTTP proxy statistics</a></div>
+<!--
+    <div class="menu label">BACKUP</div>
+    <div class="menu%TEMPLATE_VARIABLE_backupclass%"><a href="/backup.dynhtml">Backup</a></div>
+-->
+    <div class="menu label">DEBUG</div>
+    <div class="menu%TEMPLATE_VARIABLE_troubleshootingclass%"><a href="/troubleshooting.dynhtml?test">Troubleshooting</a></div>
+  </div>
+  <div id="body-right">
+%TEMPLATE_BLOCKBEGIN_flagfailed%
+    <div class="failed fatal">
+      <a class="failed fatal" href="/log.dynhtml?name=httpd">Last operation failed, click here why</a>
+    </div>
+%TEMPLATE_BLOCKEND_flagfailed%
+    <div id="body-container">
+
+<!-- 
+HEADER END
+-->

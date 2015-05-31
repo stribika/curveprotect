@@ -1,0 +1,8 @@
+zscanner/file_loader
+zscanner/scanner
+zscanner/scanner_functions
+common/errors
+common/errcode
+common/descriptor
+libknot/util/utils
+bindparser

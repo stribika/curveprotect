@@ -1,0 +1,141 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_troubleshooting.css
+%TEMPLATE_INCLUDE_FILE html/_colors.css
+</style>
+
+%TEMPLATE_BLOCKBEGIN_wait%
+<h1> tests in progress, please wait </h1>
+<div class="troubleshooting-separator"></div>
+%TEMPLATE_BLOCKEND_wait%
+
+<div class="line label">
+  <div class="troubleshooting-value">Internet connectivity check</div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_connectivity%
+<div class="line">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_connectivity%
+
+%TEMPLATE_BLOCKBEGIN_connectivityresult%
+<div class="line bold">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_connectivityresult%
+
+<div class="troubleshooting-separator"></div>
+
+<div class="line label">
+  <div class="troubleshooting-value">Streamlined DNSCurve check</div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_dnscurve%
+<div class="line">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dnscurve%
+
+%TEMPLATE_BLOCKBEGIN_dnscurveresult%
+<div class="line bold">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dnscurveresult%
+
+<div class="troubleshooting-separator"></div>
+
+<div class="line label">
+  <div class="troubleshooting-value">DNS Zones check</div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_dns%
+<div class="line">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dns%
+
+%TEMPLATE_BLOCKBEGIN_dnsresult%
+<div class="line bold">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dnsresult%
+
+
+<div class="troubleshooting-separator"></div>
+
+<div class="line label">
+  <div class="troubleshooting-value">DNSCrypt resolver check</div>
+</div><div class="lineend"></div>
+
+
+%TEMPLATE_BLOCKBEGIN_dnscrypt%
+<div class="line">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dnscrypt%
+
+%TEMPLATE_BLOCKBEGIN_dnscryptresult%
+<div class="line bold">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_dnscryptresult%
+
+<div class="troubleshooting-separator"></div>
+
+<div class="line label">
+  <div class="troubleshooting-value">resolv.conf check</div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_resolvconf%
+<div class="line">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_resolvconf%
+
+%TEMPLATE_BLOCKBEGIN_resolvconfresult%
+<div class="line bold">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_resolvconfresult%
+
+<div class="troubleshooting-separator"></div>
+
+<div class="line label">
+  <div class="troubleshooting-value">forwarder check</div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_forwarder%
+<div class="line">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_forwarder%
+
+%TEMPLATE_BLOCKBEGIN_forwarderresult%
+<div class="line bold">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_forwarderresult%
+
+<div class="troubleshooting-separator"></div>
+
+<div class="line label">
+  <div class="troubleshooting-value">VPN check</div>
+</div><div class="lineend"></div>
+
+%TEMPLATE_BLOCKBEGIN_vpn%
+<div class="line">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_vpn%
+
+%TEMPLATE_BLOCKBEGIN_vpnresult%
+<div class="line bold">
+  <div class="troubleshooting-value%TEMPLATE_VARIABLE_class%">%TEMPLATE_VARIABLE_value%</div>
+</div><div class="lineend"></div>
+%TEMPLATE_BLOCKEND_vpnresult%
+
+
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html

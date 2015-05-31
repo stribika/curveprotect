@@ -1,0 +1,43 @@
+%TEMPLATE_INCLUDE_FILE html/_header.html
+
+<script type="text/javascript">
+function checkPassword(x){
+
+        var password = x.form.elements["password"].value;
+        if (password.length < 8) {
+                alert("Password too weak!!");
+                return false;
+        }
+
+        var agree=confirm("I will save your configuration + keys to an encrypted file:\ncurveprotect-backup.enc.\nShould I really do it?");
+        if (agree)
+                return true ;
+        else
+                return false ;
+}
+</script>
+
+<style type=text/css>
+%TEMPLATE_INCLUDE_FILE html/_backup.css
+</style>
+
+<form name="input" action="curveprotect-backup.enc20" method="get">
+
+  <div class="line label">
+    <div class="backup-full">Backup configuration + keys</div>
+  </div><div class="lineend"></div>
+
+  <div class="line">
+    <div class="backup-name">Password</div>
+    <div class="backup-value"><input type="text" class="password"   name="password"   value="" /></div>
+  </div><div class="lineend"></div>
+
+  <div class="line">
+    <div class="backup-full"><input type="submit" class="submit backup-submit"  name="submit" onClick="return checkPassword(this)" value="backup"/></div>
+  </div><div class="lineend"></div>
+
+</form>
+
+<div class="backup-separator"></div>
+
+%TEMPLATE_INCLUDE_FILE html/_footer.html

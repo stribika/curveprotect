@@ -1,0 +1,26 @@
+I have used in curveprotect NaCl (Networking and Cryptography library)
+tnx Tanja Lange, Daniel J. Bernstein and Peter Schwabe
+
+I have used in curveprotect daemontools package
+tnx Daniel J. Bernstein
+
+I have used in curveprotect ucspi-tcp package
+tnx Daniel J. Bernstein 
+
+I have used in curveprotect djbdns package
+tnx Daniel J. Bernstein 
+
+I have used in curveprotect dnscurve-20090602.diff patch 
+tnx Matthew Dempsky
+
+I have used python dnscurve and tools
+tnx Matthew Dempsky
+
+Fedora rpm (file curveprotect.spec)
+tnx Radek Rada
+
+I have used in package gnupg
+tnx gnupg developers (Matthew Skala, Michael Roth, Niklas Hernaeus, Rémi Guyomarch, Werner Koch)
+
+I have used in package zscanner from Knot-dns
+tnx knot-dns developers (Ľuboš Slovák, Marek Vavruša, Jan Kadlec, Daniel Salzman, Jan Včelák, Ondřej Surý, Ondřej Filip)

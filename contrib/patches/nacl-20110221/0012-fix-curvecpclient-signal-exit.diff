@@ -1,0 +1,25 @@
+diff -Nur nacl-20110221.orig/curvecp/curvecpclient.c nacl-20110221/curvecp/curvecpclient.c
+--- nacl-20110221.orig/curvecp/curvecpclient.c	2011-02-21 02:49:34.000000000 +0100
++++ nacl-20110221/curvecp/curvecpclient.c	2013-01-27 16:15:11.366038054 +0100
+@@ -206,6 +206,10 @@
+ unsigned char childmessage[2048];
+ long long childmessagelen = 0;
+ 
++void exitasap(int sig) {
++  close(0);
++}
++
+ int main(int argc,char **argv)
+ {
+   long long hellopackets;
+@@ -213,6 +217,10 @@
+   long long nextaction;
+ 
+   signal(SIGPIPE,SIG_IGN);
++  signal(SIGHUP, exitasap);
++  signal(SIGTERM, exitasap);
++  signal(SIGINT, exitasap);
++
+ 
+   if (!argv[0]) die_usage(0);
+   for (;;) {

@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+# 20110927
+# Jan Mojzis
+# Public domain.
+
+import  cgi, lib, os, sys, check, header, htmltemplate
+
+if __name__ == '__main__':
+
+        lib.limit_resources()
+        q = cgi.parse()
+
+        name = q['name'][0]
+        check.name(name)
+
+        try:
+                limit = int(q['limit'][0])
+        except:
+                limit = 0
+
+
+        t = htmltemplate.Template("html/log.html")
+        d = header.header("log")
+        d["line"] = []
+        d["name"] = name
+
+
+        f = open("log/%s/current" % name)
+        lines = f.readlines()
+        xmin = 0
+        if limit > 0:
+                xmin = len(lines) - limit
+                if xmin < 0:
+                        xmin = 0
+        xmax = len(lines)
+        f.close()
+        for i in range(xmin, xmax):
+                (tai, ln) = lines[i].split(" ",1)
+                if ln[-1] == "\n":
+                        ln = ln[0:-1]
+                tmp = {}
+                tmp["tm"] = lib.taifmt(tai)
+                tmp["row"] = lib.escape(ln)
+
+                d["line"].append(tmp)
+
+        d["lines"] = str(xmax - xmin)
+
+        t.write(d)
+

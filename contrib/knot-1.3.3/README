@@ -1,0 +1,183 @@
+Dependencies
+============
+
+Knot DNS has several dependencies:
+* libtool
+* autoconf > 2.65
+* flex >= 2.5.31
+* bison >= 2.3
+* libssl >= 0.9.8
+* liburcu >= 0.5.4
+
+Optional packages:
+* libcap-ng >= 0.6.4 (for POSIX 1003.1e capabilites(7))
+* ragel (for fast zone parsing)
+
+Dependencies for building documentation:
+* texinfo
+
+Knot DNS requires compiler to support atomic intrinsics.
+GCC version at least 4.1 supports legacy atomic builtins, however 4.7
+or newer is preferred.
+Clang supports atomics since version 2.9.
+
+By default Knot DNS is distributed with a slower zone file parser because of
+smaller source file and quick compile time. In most cases it is sufficient.
+If you plan to process large zone files, we recommend to build Knot DNS
+using ./configure --enable-fastparser. In this case Ragel compiler is required
+and it is normal if the C compiler takes much more time (minutes).
+
+Installation
+============
+
+Knot DNS may be already included in your operating system distribution and
+therefore can be installed from packages (Linux) or ports (BSD). This is
+always preferred unless you want to test the latest features, contribute to
+Knot development, or you just know what you are doing.
+
+Following sections describe how to build Knot DNS from the source code.
+
+Installation on Debian based distributions
+==========================================
+
+The following steps should work (verified in VirtualBox only)
+for the distribution/architecture/release combinations as listed bellow.
+
+----------------------------------------------
+Debian         (AMD64, I386) 6.0.2.1 (squeeze)
+Ubuntu Server  (AMD64, I386) 10.04 LTS
+Ubuntu Desktop (AMD64, I386) 10.04 LTS
+----------------------------------------------
+
+# Make the system up-to-date
+$ sudo apt-get update
+$ sudo apt-get upgrade
+
+# Ensure all prerequisites are installed
+$ sudo apt-get install git-core autoconf libtool flex bison libssl-dev liburcu-dev
+
+# Install optional packages (POSIX 1003.1e capabilities)
+$ sudo apt-get install libcap-ng-dev
+
+# If the liburcu-dev package is not present, install it directly
+
+# Get the source code
+$ git clone git://git.nic.cz/knot-dns.git
+$ cd knot-dns
+$ autoreconf -if
+$ ./configure
+$ make
+$ sudo make install
+$ sudo ldconfig
+
+Installation on Fedora
+======================
+
+Notice: Knot DNS is available in official distribution repositories since
+Fedora 18 (Spherical Cow). Search for 'knot' package.
+
+All commands with the '#' prompt should be run as the root user, commands with
+the '$' prompt should be run as a regular non-root user.
+
+Update the system:
+# yum upgrade
+
+Ensure all base development tools are available:
+# yum install @buildsys-build
+
+Ensure all prerequisites are installed:
+# yum install libtool autoconf flex bison openssl-devel userspace-rcu-devel
+
+You can also install optional packages:
+# yum install libcap-ng-devel ragel
+
+Download the latest source code from Git and compile it:
+$ git clone git://git.nic.cz/knot-dns.git
+$ cd knot
+$ autoreconf -if
+$ ./configure
+$ make
+
+Install Knot DNS into system (run only if you really know what these commands do):
+# make install
+# ldconfig
+
+Installation on BSD
+===================
+
+Not all prerequisites are available as ports on BSD.
+
+- liburcu must be compiled from sources
+  - version 0.6.4 compiles on BSD without any source code modifications
+  - in case of x86_64 build, CFLAGS nad build type has to be set appropriately.
+    $ CFLAGS=-fPIC ./configure --build amd64
+- flex must be newer version from ports that support reentrant parsers
+
+Knot DNS requires more recent version of flex from ports, to prevent name clash
+specify flex destination.
+$ cd <knot sources>
+$ autoreconf -if
+$ ./configure
+$ make && sudo make install
+
+It is also present in port tree, so you can install it from there.
+$ cd /usr/ports/dns/knot
+$ sudo make install
+
+Installation on OpenBSD/NetBSD
+==============================
+
+Also works for OS X, if you don't want to install gcc from ports.
+Prerequisites:
+- flex and bison from packages
+
+$ mkdir liburcu && cd liburcu
+$ wget "http://lttng.org/files/urcu/userspace-rcu-0.8.0.tar.bz2"
+$ autoconf && ./configure && make && sudo make install
+$ # or follow installation instructions in INSTALL
+
+Knot DNS installation is the same as in previous section (Installation on BSD).
+
+Installation on OS X
+====================
+
+Not all prerequisites are preinstalled for OS X.
+
+- liburcu must be compiled from sources
+  - liburcu requires gcc-4.6 from MacPorts, as it depends on __thread keyword
+  $ CC=gcc-mp-4.6 ARCH=x86_64 ./configure
+  $ make && sudo make install
+- liburcu >= 0.7.0 works with supplied compiler, however ARCH must still be set
+  - alternative is to set it with configure parameter --target
+
+Compiling Knot DNS with gcc-mp-4.6 is recommended, but not necessary.
+
+Running
+=======
+
+First, each server needs configuration file.
+Please see samples/knot.sample.conf for reference.
+More examples can be found in samples/knot.full.conf
+Configuration file has to specify:
+* storage for PID files, journal files etc.
+* network interfaces
+* served zones
+
+$ cp samples/knot.sample.conf myserver.conf
+$ vim myserver.conf # or your favourite text editor
+$ knotd -h # see what it can do
+
+Second, prepare working directory.
+
+$ mkdir -p /tmp/knot-minimal/samples; cp samples/example.com.zone /tmp/knot-minimal/samples/
+
+Third, let's start the server. This can be done by running the 'knotd' command.
+Alternatively, your distribution should have an init script available, if you've
+installed Knot using a binary package.
+
+Lets start our server in foreground to see if it runs:
+
+$ knotd -c myserver.conf
+
+For more information, refer to the user manual.
+

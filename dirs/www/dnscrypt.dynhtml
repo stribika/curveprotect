@@ -1,0 +1,125 @@
+#!/usr/bin/env python
+# 20121229
+# Jan Mojzis
+# Public domain.
+
+import os, lib, header, htmltemplate, time, sys, config
+
+
+try:
+        lib.limit_resources()
+
+
+        t = htmltemplate.Template("html/dnscrypt.html")
+        d = header.header("dnscrypt")
+
+        #dnscryptcache
+        tmp = {}
+        tmp["cachesize"] = lib.openreadcloseescape("etc/dnscryptcache/env/CACHESIZE")
+        try:
+                tmp["dnscryptzone"] = lib.openreadcloseescape("etc/dnscryptcache/env/DNSCRYPTZONE")
+        except:
+                tmp["dnscryptzone"] = ""
+        try:
+                tmp["dnscryptip"] = lib.openreadcloseescape("etc/dnscryptcache/env/DNSCRYPTIP")
+        except:
+                tmp["dnscryptip"] = ""
+        try:
+                tmp["dnscryptmagic"] = lib.openreadcloseescape("etc/dnscryptcache/env/RESPONSEMAGIC")
+        except:
+                tmp["dnscryptmagic"] = ""
+
+        #cert
+        try:
+                tmp["dnscryptmagicq"] = lib.openreadcloseescape("var/dnscryptcache/env/QUERYMAGIC")
+        except:
+                tmp["dnscryptmagicq"] = ""
+        try:
+                x = lib.openreadcloseescape("var/dnscryptcache/root/servers/@")
+                x = x.split('\n')[0]
+                x = x.split('|')[1]
+                tmp["pk"] = x
+        except:
+                tmp["pk"] = ""
+
+        try:
+                tmp["serial"] = lib.openreadcloseescape("var/dnscryptcache/env/SERIAL")
+        except:
+                tmp["serial"] = ""
+        try:
+                tmp["periodsince"] = time.strftime('%Y.%m.%d %H:%M:%S',time.localtime(int(lib.openreadcloseescape("var/dnscryptcache/env/PERIODSINCE"))))
+        except:
+                tmp["periodsince"] = ""
+        try:
+                tmp["periodto"] = time.strftime('%Y.%m.%d %H:%M:%S',time.localtime(int(lib.openreadcloseescape("var/dnscryptcache/env/PERIODTO"))))
+        except:
+                tmp["periodto"] = ""
+
+        tmp["lastdownloadclass"] = ""
+        try:
+                lastdownload = int(lib.openreadcloseescape("var/dnscryptcache/env/LASTDOWNLOAD"))
+                tmp["lastdownload"] = time.strftime('%Y.%m.%d %H:%M:%S',time.localtime(lastdownload))
+                if lastdownload + 7200 < time.time():
+                        tmp["lastdownloadclass"] = " warn"
+        except:
+                tmp["lastdownload"] = ""
+
+
+        if tmp["pk"] == "" or tmp["serial"] == 0 or tmp["periodsince"] == "" or tmp["periodto"] == "":
+                tmp["display"] = "none"
+        else:
+                tmp["display"] = "block"
+
+
+        #dnscryptcache keys
+        try:
+                keydir = lib.openreadcloseescape("etc/dnscryptcache/env/ED25519KEYDIR")
+                mykey  = os.path.basename(keydir)
+        except:
+                keydir = ""
+                mykey  = ""
+
+        tmp["ed25519keys"] = []
+        mykey = os.path.basename(keydir)
+        for key in lib.ed25519_keys():
+                if mykey == key:
+                        sl='selected="selected"'
+                else:
+                        sl = ''
+                tmp1 = {}
+                tmp1["sl"] = sl
+                tmp1["key"] = key
+                tmp["ed25519keys"].append(tmp1)
+
+        #dnscurve keys
+        try:
+                keydir = lib.openreadcloseescape("etc/dnscryptcache/env/KEYDIR")
+                mykey  = os.path.basename(keydir)
+        except:
+                keydir = ""
+                mykey  = ""
+
+        tmp["keys"] = []
+        mykey = os.path.basename(keydir)
+        for key in lib.dnscurve_keys():
+                if mykey == key:
+                        sl='selected="selected"'
+                else:
+                        sl = ''
+                tmp1 = {}
+                tmp1["sl"] = sl
+                tmp1["key"] = key
+                tmp["keys"].append(tmp1)
+
+
+        #dnscryptcache status
+        tmp["status"] = lib.svc("%s/dnscryptcache" % (config.servicedir))
+
+        #dnscryptcache ip
+        tmp["ip"] = config.dnscryptcacheip
+
+        d["dnscryptcache"] = [tmp]
+
+        t.write(d)
+except:
+        raise

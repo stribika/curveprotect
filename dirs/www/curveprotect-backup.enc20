@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+# 20121209
+# Jan Mojzis
+# Public domain.
+
+import sys, cgi, os, lib, check, struct, cStringIO, tarfile, time
+import Crypto.Util.Counter
+import Crypto.Cipher.AES
+import hashlib, hmac
+
+try:
+    import nacl
+except ImportError:
+    import slownacl as nacl
+
+def exclude(name = ""):
+        """
+        """
+
+        if name[0:22] == "etc/dnscache/root/dump":
+                return True
+        if name[0:25] == "etc/dnscryptcache/root/dump":
+                return True
+        return False
+
+def tardata():
+        """
+        """
+
+        c = cStringIO.StringIO()
+        tar = tarfile.open(mode='w', fileobj = c)
+        tar.add("etc", exclude = exclude)
+        tar.add(".keys")
+        m = c.getvalue()
+        tar.close()
+        return m
+
+
+def sha512hmacpbkdf2(P = "", S = "", c = 0, dkLen = 64):
+    hLen  = 64
+
+    l = -(-dkLen // hLen)
+    r = dkLen - (l - 1) * hLen
+
+    def F(i):
+        def xor(A, B):
+            return ''.join([chr(ord(a) ^ ord(b)) for a, b in zip(A, B)])
+        def U():
+            U = S + struct.pack('>I', i)
+            for j in range(c):
+                U = hmac.new(P, U, hashlib.sha512).digest()
+                yield U
+
+        return reduce(xor, U())
+
+    T = map(F, range(1, l+1))
+
+    DK = ''.join(T[:-1]) + T[-1][:r]
+    return DK
+
+
+
+try:
+        lib.limit_resources2()
+        q = cgi.parse()
+
+        #salt + nonce
+        salt = nacl.randombytes(12)
+        n1 = nacl.randombytes(8)
+        n2 = struct.pack("<Q", int(1000000000 * time.time()))
+
+        #XXX: javascript should check the password strength
+        #keys
+        k = sha512hmacpbkdf2(q['password'][0], salt, 20000, 64)
+        k1=k[0:32]
+        k2=k[32:]
+
+        #get data
+        m = tardata()
+
+        #add hash to end of the message
+        m = "%s%s" % (m, nacl.crypto_hash_sha512(m)[0:16])
+
+        #encrypt using salsa20
+        c = nacl.crypto_stream_salsa20_xor(m, n2, k2)
+
+        #encrypt using aes256
+        ctr = Crypto.Util.Counter.new(nbits=64, initial_value=0, prefix=n1)
+        c = Crypto.Cipher.AES.new(k1, Crypto.Cipher.AES.MODE_CTR, counter=ctr).encrypt(c)
+
+        #write cipher-text
+        sys.stdout.write("5sA2")
+        sys.stdout.write(salt)
+        sys.stdout.write(n1)
+        sys.stdout.write(n2)
+        sys.stdout.write(c)
+        sys.stdout.flush()
+except:
+        sys.stderr.write(lib.get_tb())
+        sys.stderr.write("\n")
+        sys.stderr.flush()

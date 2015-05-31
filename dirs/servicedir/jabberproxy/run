@@ -1,0 +1,13 @@
+#!/bin/sh
+exec 2>&1
+PATH="_CURVEPROTECT_/bin:${PATH}"
+export PATH
+service="jabberproxy"
+export service
+
+exec envdir "_CURVEPROTECT_/etc/${service}/env" sh -c '
+  if [ x"${DEBUG}" != x ]; then
+    RECORDIO=recordio
+  fi
+  exec softlimit -a1000000000 -o20 -d10000000 nettcpserver "${IP}" "${PORT}" ${RECORDIO} "${service}"
+'

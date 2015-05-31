@@ -1,0 +1,13 @@
+#!/bin/sh
+exec 2>&1
+PATH="_CURVEPROTECT_/bin:${PATH}"
+export PATH
+service="httpproxy"
+export service
+
+exec envdir "_CURVEPROTECT_/etc/${service}/env" sh -c '
+  if [ x"${DEBUG}" != x ]; then
+    RECORDIO=recordio
+  fi
+  exec envuidgid _CPUSR_ softlimit -a1000000000 -o20 -c200 nettcpserver -Uc 150 "${IP}" "${PORT}" ${RECORDIO} "${service}"
+'

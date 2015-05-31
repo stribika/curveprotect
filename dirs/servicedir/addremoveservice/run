@@ -1,0 +1,53 @@
+#!/bin/sh
+
+exec 2>&1
+
+PATH="_CURVEPROTECT_/bin:${PATH}"
+export PATH
+
+min=2
+max=3
+
+# VPN
+x=`vpn-emptyservices`
+
+if [ "${x}" -gt "${max}" ]; then
+  n=`expr "${x}" - "${max}"`
+  nn=`awk 'BEGIN{for(i=0;i<'$n';++i)print i;exit}'`
+  for nnn in ${nn}; do
+    echo "removing vpn service"
+    vpn-removeservice
+  done
+fi
+
+if [ "${x}" -lt "${min}" ]; then
+  n=`expr "${min}" - "${x}"`
+  nn=`awk 'BEGIN{for(i=0;i<'$n';++i)print i;exit}'`
+  for nnn in ${nn}; do
+    echo "adding vpn service"
+    vpn-addservice
+  done
+fi
+
+# FORWARDER
+x=`forwarder-emptyservices`
+
+if [ "${x}" -gt "${max}" ]; then
+  n=`expr "${x}" - "${max}"`
+  nn=`awk 'BEGIN{for(i=0;i<'$n';++i)print i;exit}'`
+  for nnn in ${nn}; do
+    echo "removing forwarder service"
+    forwarder-removeservice
+  done
+fi
+
+if [ "${x}" -lt "${min}" ]; then
+  n=`expr "${min}" - "${x}"`
+  nn=`awk 'BEGIN{for(i=0;i<'$n';++i)print i;exit}'`
+  for nnn in ${nn}; do
+    echo "adding forwarder service"
+    forwarder-addservice
+  done
+fi
+
+exec sleep 86400

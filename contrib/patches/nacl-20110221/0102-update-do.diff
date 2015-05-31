@@ -1,0 +1,13 @@
+diff -Nur nacl-20110221.orig/do nacl-20110221/do
+--- nacl-20110221.orig/do	2012-06-08 14:42:17.365709982 +0200
++++ nacl-20110221/do	2012-06-08 14:40:33.738011781 +0200
+@@ -8,7 +8,8 @@
+ project=nacl
+ shorthostname=`hostname | sed 's/\..*//' | tr -cd '[a-z][A-Z][0-9]'`
+ 
+-top="`pwd`/build/$shorthostname"
++#top="`pwd`/build/$shorthostname"
++top="`pwd`/../../build"
+ bin="$top/bin"
+ lib="$top/lib"
+ include="$top/include"

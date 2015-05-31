@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+# 20130323
+# Jan Mojzis
+# Public domain.
+
+import os, lib, header, time, htmltemplate, sys
+
+#XXX
+warnseconds = 2592000
+devel = os.getenv("DEVEL")
+
+def parseTm(s = ""):
+        """
+        """
+
+        if len(s) == 0:
+                return time.time() + warnseconds + warnseconds
+
+        if len(s) != 10:
+                raise Exception("bad string length")
+        return time.mktime(time.strptime(s, "%Y.%m.%d"))
+
+try:
+        #lib.limit_resources3()
+        lib.droproot()
+
+        t = htmltemplate.Template("html/gpgkeys.html")
+        d = header.header("gpgkeys")
+        keytype = "gpg"
+        d["newkey"] = []
+        if devel:
+                d["newkey"].append({"keytype":keytype})
+        d["keys"] = []
+
+        cmd = "gpg-list"
+        p = os.popen(cmd)
+        lines = p.readlines()
+        p.close()
+
+        for line in lines:
+                values = line.split(':')
+
+                if values[0] != "pub":
+                        continue
+
+                tmp = {}
+                tmp["name"] = lib.escape(values[4])
+                tmp["tm"] = lib.escape(values[6].replace('-','.'))
+                tmp["pk"] = lib.escape(values[9])
+                tmp["keytype"] = keytype
+                tmp["class"] = ""
+
+                tmp["removebutton"] = []
+                if devel:
+                        tmp["removebutton"].append({})
+
+                xtm = parseTm(tmp["tm"])
+                if (time.time() + warnseconds > xtm):
+                        if time.time() > xtm:
+                                tmp["class"] = " fatal"
+                                tmp["tm"] += " (expired)"
+                        else:
+                                tmp["class"] = " warn"
+                                tmp["tm"] += " (will expire soon)"
+
+                d["keys"].append(tmp)
+        t.write(d)
+
+except:
+        raise
